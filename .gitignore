@@ -38,6 +38,8 @@ mlartifacts/
 
 # ---- Agent-generated tickets (runtime artifacts) ----
 reports/tickets/
+reports/ticket_approved/
+reports/ticket_rejected/
 
 # ---- Local env ----
 .env
