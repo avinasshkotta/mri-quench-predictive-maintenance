@@ -1,0 +1,912 @@
+{
+  "config": {
+    "sequence_length": 48,
+    "step_minutes": 15,
+    "horizon_hours": 96,
+    "min_lead_hours": 72,
+    "thresholds": {
+      "lstm": 0.9,
+      "logreg": 0.999468,
+      "hist_gbdt": 0.993844
+    },
+    "threshold_reason": {
+      "lstm": "best lead-time recall among 20 operating points with <= 0.60 false pages/magnet-month (1 budget x 0.6 safety)",
+      "logreg": "best lead-time recall among 6 operating points with <= 0.60 false pages/magnet-month (1 budget x 0.6 safety)",
+      "hist_gbdt": "best lead-time recall among 6 operating points with <= 0.60 false pages/magnet-month (1 budget x 0.6 safety)"
+    },
+    "false_alert_budget": 1.0,
+    "selection_safety_factor": 0.6,
+    "cost": {
+      "emergency_total_usd": 195000.0,
+      "planned_total_usd": 81000.0,
+      "false_alarm_usd": 2000.0
+    }
+  },
+  "results": {
+    "lstm": {
+      "split_size_windows": 7699,
+      "n_quench_events": 4,
+      "threshold": 0.9,
+      "magnet_months": 3.125,
+      "classification": {
+        "precision": 0.955196017423771,
+        "recall": 0.9993489583333334,
+        "f1": 0.9767737830098632,
+        "pr_auc": 0.9978041569180832,
+        "roc_auc": 0.9994546482874953,
+        "accuracy": 0.9905182491232628,
+        "confusion_matrix": {
+          "tn": 6091,
+          "fp": 72,
+          "fn": 1,
+          "tp": 1535
+        },
+        "prevalence": 0.1995064294064164,
+        "n_windows": 7699
+      },
+      "alerts": {
+        "episodes": 6,
+        "false_alerts": 2,
+        "false_per_magnet_month": 0.64,
+        "true_alerts": 4
+      },
+      "events": {
+        "detected": 4,
+        "detected_in_time": 4,
+        "event_recall": 1.0,
+        "event_recall_in_time": 1.0,
+        "lead_hours_median": 96.0,
+        "lead_hours_min": 95.75,
+        "lead_hours_max": 96.0,
+        "pct_lead_ge_72h": 100.0
+      },
+      "cost": {
+        "n_events": 4,
+        "detected_in_time": 4,
+        "missed": 0,
+        "false_alerts": 2,
+        "cost_per_quench_usd": 195000.0,
+        "cost_per_planned_repair_usd": 81000.0,
+        "cost_per_false_alarm_usd": 2000.0,
+        "reactive_total_usd": 780000.0,
+        "predictive_total_usd": 328000.0,
+        "net_savings_usd": 452000.0,
+        "saving_per_detected_event_usd": 114000.0
+      },
+      "_episodes": [
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-15T17:30:00",
+          "last_time": "2025-03-20T02:45:00",
+          "peak_score": 0.9995380640029907,
+          "windows": 422
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-18T11:45:00",
+          "last_time": "2025-03-18T14:00:00",
+          "peak_score": 0.9872207045555115,
+          "windows": 10
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T03:00:00",
+          "last_time": "2025-03-26T02:45:00",
+          "peak_score": 0.9995402097702026,
+          "windows": 384
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-16T11:00:00",
+          "last_time": "2025-03-16T16:30:00",
+          "peak_score": 0.9992699027061462,
+          "windows": 23
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T03:15:00",
+          "last_time": "2025-03-29T02:45:00",
+          "peak_score": 0.9995385408401489,
+          "windows": 383
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-18T02:45:00",
+          "last_time": "2025-03-22T02:45:00",
+          "peak_score": 0.9995394945144653,
+          "windows": 385
+        }
+      ],
+      "_outcomes": [
+        {
+          "magnet_id": "MRI-01",
+          "event_time": "2025-03-20T03:00:00",
+          "alert_time": "2025-03-15T17:30:00",
+          "lead_hours": 96.0,
+          "lead_hours_unclamped": 105.5,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-06",
+          "event_time": "2025-03-22T03:00:00",
+          "alert_time": "2025-03-18T02:45:00",
+          "lead_hours": 96.0,
+          "lead_hours_unclamped": 96.25,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-02",
+          "event_time": "2025-03-26T03:00:00",
+          "alert_time": "2025-03-22T03:00:00",
+          "lead_hours": 96.0,
+          "lead_hours_unclamped": 96.0,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-05",
+          "event_time": "2025-03-29T03:00:00",
+          "alert_time": "2025-03-25T03:15:00",
+          "lead_hours": 95.75,
+          "lead_hours_unclamped": 95.75,
+          "detected": true,
+          "detected_in_time": true
+        }
+      ]
+    },
+    "logreg": {
+      "split_size_windows": 7699,
+      "n_quench_events": 4,
+      "threshold": 0.999468,
+      "magnet_months": 3.125,
+      "classification": {
+        "precision": 1.0,
+        "recall": 0.658203125,
+        "f1": 0.7938751472320377,
+        "pr_auc": 0.9754459400476515,
+        "roc_auc": 0.9930870002095842,
+        "accuracy": 0.9318093258864788,
+        "confusion_matrix": {
+          "tn": 6163,
+          "fp": 0,
+          "fn": 525,
+          "tp": 1011
+        },
+        "prevalence": 0.1995064294064164,
+        "n_windows": 7699
+      },
+      "alerts": {
+        "episodes": 48,
+        "false_alerts": 0,
+        "false_per_magnet_month": 0.0,
+        "true_alerts": 48
+      },
+      "events": {
+        "detected": 4,
+        "detected_in_time": 2,
+        "event_recall": 1.0,
+        "event_recall_in_time": 0.5,
+        "lead_hours_median": 76.25,
+        "lead_hours_min": 67.75,
+        "lead_hours_max": 91.5,
+        "pct_lead_ge_72h": 50.0
+      },
+      "cost": {
+        "n_events": 4,
+        "detected_in_time": 2,
+        "missed": 2,
+        "false_alerts": 0,
+        "cost_per_quench_usd": 195000.0,
+        "cost_per_planned_repair_usd": 81000.0,
+        "cost_per_false_alarm_usd": 2000.0,
+        "reactive_total_usd": 780000.0,
+        "predictive_total_usd": 552000.0,
+        "net_savings_usd": 228000.0,
+        "saving_per_detected_event_usd": 114000.0
+      },
+      "_episodes": [
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T07:30:00",
+          "last_time": "2025-03-16T07:30:00",
+          "peak_score": 0.9996479918633248,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T09:30:00",
+          "last_time": "2025-03-16T10:00:00",
+          "peak_score": 0.999838868910799,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T13:00:00",
+          "last_time": "2025-03-16T13:00:00",
+          "peak_score": 0.9995684155521438,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T14:00:00",
+          "last_time": "2025-03-16T14:00:00",
+          "peak_score": 0.9995445988334656,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T15:15:00",
+          "last_time": "2025-03-17T06:45:00",
+          "peak_score": 0.9999998977975577,
+          "windows": 63
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-18T01:30:00",
+          "last_time": "2025-03-18T01:30:00",
+          "peak_score": 0.999992774987311,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-18T02:30:00",
+          "last_time": "2025-03-18T02:30:00",
+          "peak_score": 0.9999596824630638,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-18T03:00:00",
+          "last_time": "2025-03-18T03:30:00",
+          "peak_score": 0.999997393375836,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-18T04:00:00",
+          "last_time": "2025-03-18T04:00:00",
+          "peak_score": 0.9999887381243594,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-18T04:30:00",
+          "last_time": "2025-03-19T20:15:00",
+          "peak_score": 0.9999999602748537,
+          "windows": 160
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-19T20:45:00",
+          "last_time": "2025-03-19T21:00:00",
+          "peak_score": 0.9994984058230447,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-19T21:45:00",
+          "last_time": "2025-03-19T22:30:00",
+          "peak_score": 0.9998943289340246,
+          "windows": 4
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-20T00:15:00",
+          "last_time": "2025-03-20T00:15:00",
+          "peak_score": 0.9998763131075871,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-20T01:00:00",
+          "last_time": "2025-03-20T01:15:00",
+          "peak_score": 0.9998731441344951,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-20T02:15:00",
+          "last_time": "2025-03-20T02:45:00",
+          "peak_score": 0.9997094345246977,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T04:45:00",
+          "last_time": "2025-03-23T04:45:00",
+          "peak_score": 0.9995778410539354,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T05:30:00",
+          "last_time": "2025-03-23T05:30:00",
+          "peak_score": 0.9997378825705849,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T07:00:00",
+          "last_time": "2025-03-23T07:15:00",
+          "peak_score": 0.9996876161042265,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T07:45:00",
+          "last_time": "2025-03-23T08:00:00",
+          "peak_score": 0.9996841281350161,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T09:00:00",
+          "last_time": "2025-03-23T09:00:00",
+          "peak_score": 0.9995577875543358,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T09:30:00",
+          "last_time": "2025-03-23T15:00:00",
+          "peak_score": 0.9999974853330433,
+          "windows": 23
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-23T20:15:00",
+          "last_time": "2025-03-26T02:45:00",
+          "peak_score": 0.9999999999993734,
+          "windows": 219
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T16:45:00",
+          "last_time": "2025-03-25T17:15:00",
+          "peak_score": 0.9998526358497016,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T17:45:00",
+          "last_time": "2025-03-25T18:15:00",
+          "peak_score": 0.9997363065830399,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T18:45:00",
+          "last_time": "2025-03-26T03:00:00",
+          "peak_score": 0.9999944649515439,
+          "windows": 34
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T12:45:00",
+          "last_time": "2025-03-26T13:00:00",
+          "peak_score": 0.9997181785368181,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T14:15:00",
+          "last_time": "2025-03-26T14:30:00",
+          "peak_score": 0.9998688373984442,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T15:30:00",
+          "last_time": "2025-03-26T15:30:00",
+          "peak_score": 0.9998159697789865,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T16:15:00",
+          "last_time": "2025-03-26T17:45:00",
+          "peak_score": 0.9999847343873194,
+          "windows": 7
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T18:15:00",
+          "last_time": "2025-03-26T19:00:00",
+          "peak_score": 0.9999097958116415,
+          "windows": 4
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T19:30:00",
+          "last_time": "2025-03-26T19:30:00",
+          "peak_score": 0.9999277963156544,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T20:30:00",
+          "last_time": "2025-03-26T20:45:00",
+          "peak_score": 0.999934406669969,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T22:15:00",
+          "last_time": "2025-03-26T22:45:00",
+          "peak_score": 0.9998674334976592,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-26T23:45:00",
+          "last_time": "2025-03-27T00:00:00",
+          "peak_score": 0.9996976131672453,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T00:30:00",
+          "last_time": "2025-03-27T00:30:00",
+          "peak_score": 0.9995156319525978,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T01:15:00",
+          "last_time": "2025-03-27T01:30:00",
+          "peak_score": 0.9998988249682147,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T02:15:00",
+          "last_time": "2025-03-27T02:45:00",
+          "peak_score": 0.9999986372473909,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T03:15:00",
+          "last_time": "2025-03-27T03:45:00",
+          "peak_score": 0.9999941438022144,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T04:30:00",
+          "last_time": "2025-03-27T04:30:00",
+          "peak_score": 0.9999993196449498,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-27T05:00:00",
+          "last_time": "2025-03-28T11:15:00",
+          "peak_score": 0.9999999555333179,
+          "windows": 122
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-28T11:45:00",
+          "last_time": "2025-03-28T22:15:00",
+          "peak_score": 0.999990289151184,
+          "windows": 43
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-28T22:45:00",
+          "last_time": "2025-03-29T02:45:00",
+          "peak_score": 0.9999889069991637,
+          "windows": 17
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-19T07:15:00",
+          "last_time": "2025-03-19T07:15:00",
+          "peak_score": 0.9999130586075388,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-19T07:45:00",
+          "last_time": "2025-03-19T08:00:00",
+          "peak_score": 0.9995368067044047,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-19T08:30:00",
+          "last_time": "2025-03-19T08:30:00",
+          "peak_score": 0.9995237524055426,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-19T10:30:00",
+          "last_time": "2025-03-19T10:45:00",
+          "peak_score": 0.9997499052071859,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-19T11:30:00",
+          "last_time": "2025-03-21T23:00:00",
+          "peak_score": 0.9999999996558118,
+          "windows": 239
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-21T23:30:00",
+          "last_time": "2025-03-22T02:45:00",
+          "peak_score": 0.9999907542053602,
+          "windows": 14
+        }
+      ],
+      "_outcomes": [
+        {
+          "magnet_id": "MRI-01",
+          "event_time": "2025-03-20T03:00:00",
+          "alert_time": "2025-03-16T07:30:00",
+          "lead_hours": 91.5,
+          "lead_hours_unclamped": 91.5,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-06",
+          "event_time": "2025-03-22T03:00:00",
+          "alert_time": "2025-03-19T07:15:00",
+          "lead_hours": 67.75,
+          "lead_hours_unclamped": 67.75,
+          "detected": true,
+          "detected_in_time": false
+        },
+        {
+          "magnet_id": "MRI-02",
+          "event_time": "2025-03-26T03:00:00",
+          "alert_time": "2025-03-23T04:45:00",
+          "lead_hours": 70.25,
+          "lead_hours_unclamped": 70.25,
+          "detected": true,
+          "detected_in_time": false
+        },
+        {
+          "magnet_id": "MRI-05",
+          "event_time": "2025-03-29T03:00:00",
+          "alert_time": "2025-03-25T16:45:00",
+          "lead_hours": 82.25,
+          "lead_hours_unclamped": 82.25,
+          "detected": true,
+          "detected_in_time": true
+        }
+      ]
+    },
+    "hist_gbdt": {
+      "split_size_windows": 7699,
+      "n_quench_events": 4,
+      "threshold": 0.993844,
+      "magnet_months": 3.125,
+      "classification": {
+        "precision": 0.9952638700947226,
+        "recall": 0.9576822916666666,
+        "f1": 0.9761114797611148,
+        "pr_auc": 0.9973215144094629,
+        "roc_auc": 0.9996320658567257,
+        "accuracy": 0.9906481361215742,
+        "confusion_matrix": {
+          "tn": 6156,
+          "fp": 7,
+          "fn": 65,
+          "tp": 1471
+        },
+        "prevalence": 0.1995064294064164,
+        "n_windows": 7699
+      },
+      "alerts": {
+        "episodes": 24,
+        "false_alerts": 3,
+        "false_per_magnet_month": 0.96,
+        "true_alerts": 21
+      },
+      "events": {
+        "detected": 4,
+        "detected_in_time": 4,
+        "event_recall": 1.0,
+        "event_recall_in_time": 1.0,
+        "lead_hours_median": 93.625,
+        "lead_hours_min": 92.75,
+        "lead_hours_max": 96.0,
+        "pct_lead_ge_72h": 100.0
+      },
+      "cost": {
+        "n_events": 4,
+        "detected_in_time": 4,
+        "missed": 0,
+        "false_alerts": 3,
+        "cost_per_quench_usd": 195000.0,
+        "cost_per_planned_repair_usd": 81000.0,
+        "cost_per_false_alarm_usd": 2000.0,
+        "reactive_total_usd": 780000.0,
+        "predictive_total_usd": 330000.0,
+        "net_savings_usd": 450000.0,
+        "saving_per_detected_event_usd": 114000.0
+      },
+      "_episodes": [
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T01:30:00",
+          "last_time": "2025-03-16T01:45:00",
+          "peak_score": 0.9976945953738495,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T02:15:00",
+          "last_time": "2025-03-16T03:00:00",
+          "peak_score": 0.9994611378965521,
+          "windows": 4
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T03:30:00",
+          "last_time": "2025-03-16T03:45:00",
+          "peak_score": 0.9984453342988159,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T04:15:00",
+          "last_time": "2025-03-16T05:00:00",
+          "peak_score": 0.9994560658078059,
+          "windows": 4
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T05:30:00",
+          "last_time": "2025-03-16T06:30:00",
+          "peak_score": 0.9994647988751433,
+          "windows": 5
+        },
+        {
+          "magnet_id": "MRI-01",
+          "alert_time": "2025-03-16T07:00:00",
+          "last_time": "2025-03-20T02:45:00",
+          "peak_score": 0.9994650814967269,
+          "windows": 368
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T06:15:00",
+          "last_time": "2025-03-22T06:15:00",
+          "peak_score": 0.994270163854318,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T07:15:00",
+          "last_time": "2025-03-22T07:15:00",
+          "peak_score": 0.9971577682067956,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T07:45:00",
+          "last_time": "2025-03-22T08:00:00",
+          "peak_score": 0.9970031990856972,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T08:45:00",
+          "last_time": "2025-03-22T08:45:00",
+          "peak_score": 0.9960535588499502,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T09:30:00",
+          "last_time": "2025-03-22T09:45:00",
+          "peak_score": 0.9980943146546123,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T10:15:00",
+          "last_time": "2025-03-22T10:45:00",
+          "peak_score": 0.9976386719709837,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T12:00:00",
+          "last_time": "2025-03-22T12:45:00",
+          "peak_score": 0.9981856571004294,
+          "windows": 4
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T13:15:00",
+          "last_time": "2025-03-22T22:00:00",
+          "peak_score": 0.9989244451206122,
+          "windows": 36
+        },
+        {
+          "magnet_id": "MRI-02",
+          "alert_time": "2025-03-22T23:15:00",
+          "last_time": "2025-03-26T02:45:00",
+          "peak_score": 0.999461006274796,
+          "windows": 303
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T02:15:00",
+          "last_time": "2025-03-25T02:15:00",
+          "peak_score": 0.9981559693374182,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T02:45:00",
+          "last_time": "2025-03-25T02:45:00",
+          "peak_score": 0.9941907437755516,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T04:30:00",
+          "last_time": "2025-03-25T04:30:00",
+          "peak_score": 0.995857380394767,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T05:00:00",
+          "last_time": "2025-03-25T05:00:00",
+          "peak_score": 0.9988952967842148,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T05:45:00",
+          "last_time": "2025-03-25T05:45:00",
+          "peak_score": 0.9938625005314666,
+          "windows": 1
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T06:15:00",
+          "last_time": "2025-03-25T06:30:00",
+          "peak_score": 0.9992487930823273,
+          "windows": 2
+        },
+        {
+          "magnet_id": "MRI-05",
+          "alert_time": "2025-03-25T07:00:00",
+          "last_time": "2025-03-29T02:45:00",
+          "peak_score": 0.9994619356055884,
+          "windows": 368
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-18T06:15:00",
+          "last_time": "2025-03-18T06:45:00",
+          "peak_score": 0.9981477290208293,
+          "windows": 3
+        },
+        {
+          "magnet_id": "MRI-06",
+          "alert_time": "2025-03-18T08:30:00",
+          "last_time": "2025-03-22T02:45:00",
+          "peak_score": 0.9994601500296816,
+          "windows": 362
+        }
+      ],
+      "_outcomes": [
+        {
+          "magnet_id": "MRI-01",
+          "event_time": "2025-03-20T03:00:00",
+          "alert_time": "2025-03-16T02:15:00",
+          "lead_hours": 96.0,
+          "lead_hours_unclamped": 96.75,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-06",
+          "event_time": "2025-03-22T03:00:00",
+          "alert_time": "2025-03-18T06:15:00",
+          "lead_hours": 92.75,
+          "lead_hours_unclamped": 92.75,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-02",
+          "event_time": "2025-03-26T03:00:00",
+          "alert_time": "2025-03-22T06:15:00",
+          "lead_hours": 92.75,
+          "lead_hours_unclamped": 92.75,
+          "detected": true,
+          "detected_in_time": true
+        },
+        {
+          "magnet_id": "MRI-05",
+          "event_time": "2025-03-29T03:00:00",
+          "alert_time": "2025-03-25T04:30:00",
+          "lead_hours": 94.5,
+          "lead_hours_unclamped": 94.5,
+          "detected": true,
+          "detected_in_time": true
+        }
+      ]
+    }
+  },
+  "importance": [
+    {
+      "feature": "p_last",
+      "importance": 0.007809948801994324
+    },
+    {
+      "feature": "p_mean",
+      "importance": 0.007112421005964279
+    },
+    {
+      "feature": "p_roll5_mean",
+      "importance": 0.005519663870334625
+    },
+    {
+      "feature": "p_roll30_mean",
+      "importance": 0.004779435962438583
+    },
+    {
+      "feature": "p_below_crit_count",
+      "importance": 0.0034478229135274886
+    },
+    {
+      "feature": "p_noise_std",
+      "importance": 0.0030763207972049713
+    },
+    {
+      "feature": "v_rms",
+      "importance": 0.002435006007552147
+    },
+    {
+      "feature": "p_trend_7d",
+      "importance": 0.0024017122089862826
+    },
+    {
+      "feature": "v_rms_rollmax_1h",
+      "importance": 0.002384567737579346
+    },
+    {
+      "feature": "v_rms_rollstd_1h",
+      "importance": 0.00230665285885334
+    },
+    {
+      "feature": "rf_mean_w",
+      "importance": 0.0014156115204095841
+    },
+    {
+      "feature": "p_delta_max",
+      "importance": 0.0013907228037714958
+    },
+    {
+      "feature": "t_trend_7d",
+      "importance": 0.0011004609018564224
+    },
+    {
+      "feature": "t_spike_count",
+      "importance": 0.0010923285111784935
+    },
+    {
+      "feature": "v_fault_ratio",
+      "importance": 0.0010880789682269096
+    }
+  ],
+  "training": {
+    "best_val_pr_auc": 0.994698849081793,
+    "epochs_run": 10
+  }
+}

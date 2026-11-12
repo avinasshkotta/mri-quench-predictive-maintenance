@@ -1,0 +1,42 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- Test / lint caches ----
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Generated data (recreate with: python scripts/run_pipeline.py) ----
+data/raw/*
+data/silver/*
+data/gold/*
+data/lineage/*
+!data/raw/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+
+# ---- Trained artifacts ----
+models/*
+!models/.gitkeep
+
+# ---- Local env ----
+.env
+*.log
+
+# ---- OS / editor ----
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
