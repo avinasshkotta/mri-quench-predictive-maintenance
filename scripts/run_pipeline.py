@@ -167,6 +167,24 @@ def main() -> int:
         sweep_all.to_csv(REPORTS_DIR / "threshold_sweep.csv", index=False)
     pd.DataFrame(history).to_csv(REPORTS_DIR / "training_history.csv", index=False)
 
+    # 8 -- XAI: SHAP on the interpretable baseline ------------------------------------
+    print("\n[xai] SHAP explanations (TreeExplainer on hist_gbdt)")
+    import numpy as np
+
+    from quenchguard.baselines import last_step
+    from quenchguard.explain import explain_case
+
+    X_test_last = last_step(splits["test"].X)
+    test_proba = models["hist_gbdt"].predict_proba(X_test_last)[:, 1]
+    shap_case = int(np.argmax(test_proba))   # explain the most confident positive
+    shap_info = explain_case(
+        models["hist_gbdt"], X_test_last, FEATURE_COLUMNS,
+        case_index=shap_case, figures_dir=REPORTS_DIR / "figures", prefix="shap",
+    )
+    print("  top factors for the highest-risk test window: " + ", ".join(
+        f"{f['feature']} ({f['shap_value']:+.3f}, {f['direction']})"
+        for f in shap_info["top_factors"]))
+
     payload = {
         "config": {
             "sequence_length": cfg.window.seq_len,
@@ -183,10 +201,22 @@ def main() -> int:
         },
         "results": report,
         "importance": imp.head(15).to_dict(orient="records"),
+        "shap": shap_info,
         "training": {"best_val_pr_auc": float(max(h["val_ap"] for h in history)),
                      "epochs_run": len(history)},
     }
     path = write_metrics(payload, cfg.metrics_path)
+
+    # 9 -- MLflow tracking + model registry -------------------------------------------
+    print("\n[mlflow] logging experiment run + registering champion model")
+    from quenchguard.tracking import log_run
+
+    run_info = log_run(cfg=cfg, report=report, thresholds=thresholds,
+                       history=history, model=model)
+    if run_info:
+        print(f"  run_id={run_info['run_id']}  model={run_info['model_uri']}")
+    else:
+        print("  (tracking skipped -- see warning above)")
 
     print("\n" + "=" * 78)
     print(f"{'model':<12} {'PR-AUC':>7} {'prec':>6} {'rec':>6} "

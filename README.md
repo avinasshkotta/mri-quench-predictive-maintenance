@@ -83,15 +83,19 @@ mri-quench-predictive-maintenance/
 │   ├── sequences.py       # time-ordered splits, scaling, 48-step windows
 │   ├── baselines.py       # logreg + HistGBDT (must be beaten)
 │   ├── lstm.py            # model, training loop, gradient attribution
-│   └── evaluate.py        # threshold policy, lead time, cost model, plots
+│   ├── evaluate.py        # threshold policy, lead time, cost model, plots
+│   ├── explain.py         # SHAP: TreeExplainer global/local explanations
+│   └── tracking.py        # MLflow experiment tracking + model registry
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
-├── tests/                 # 34 pytest tests (leakage guards, quality gates, costs)
-├── reports/               # metrics.json, sweeps, figures, interactive + notebook HTML
-├── docs/case-study-rctc.md
+├── tests/                 # 43 pytest tests (leakage guards, quality gates, XAI, tracking)
+├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
+├── docs/
+│   ├── case-study-rctc.md
+│   └── model_card.md      # model card, attached to every MLflow run
 ├── requirements.txt
 └── pyproject.toml
 ```
@@ -105,9 +109,12 @@ git clone <repo-url> mri-quench-predictive-maintenance
 cd mri-quench-predictive-maintenance
 pip install -r requirements.txt
 
-python scripts/run_pipeline.py            # full run: data → medallion → model → reports
+python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 34 tests
+python -m pytest                          # 43 tests
+
+# experiment tracking + model registry (SQLite store at ./mlflow.db)
+mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000   # browse runs
 
 # data layer only (Bronze → Silver → Gold, with quality gates)
 python scripts/build_medallion.py          # build all three layers
@@ -153,6 +160,15 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
    (1 × 0.6 safety factor), then frozen. Test is scored exactly once.
 6. **Business metrics, not textbook ones**: event recall at ≥ 72 h lead, false pages per
    magnet-month, lead-time distribution, and a dollar cost model.
+7. **XAI where it pays** — SHAP TreeExplainer on the `hist_gbdt` baseline gives exact
+   global (beeswarm) and local (waterfall + top-3 factors per alert) explanations; the
+   LSTM keeps gradient attribution, because SHAP over 48×36 windows is orders of
+   magnitude slower with no extra decision value. Both are written to
+   `reports/figures/shap_*.png` and `metrics.json → shap`.
+8. **Experiment tracking + registry** — every run logs params, all README metrics and
+   artifacts to MLflow (SQLite store, `mlflow.db`), and the trained LSTM is registered
+   as `quenchguard_lstm` with the `champion` alias. Tracking failures are warnings, never
+   pipeline failures.
 
 ---
 
@@ -169,6 +185,11 @@ classification, the threshold policy's budget compliance, and cost arithmetic.
 Plus 9 medallion tests: silver cleaning rules (dedupe, causal ffill, range filters),
 Great Expectations gates passing on fleet data and failing on corrupt input, lineage
 checksum verification, and gold-layer schema/no-NaN invariants.
+Plus 9 Phase B tests: SHAP top-factor ordering/direction and the efficiency property
+(base value + contributions = model output), figure/payload generation, MLflow metric
+flattening, param/metric/tag logging to an isolated SQLite store, `champion` alias
+registration with model round-trip loading, and the guarantee that a tracking outage
+returns `None` instead of raising.
 
 ---
 

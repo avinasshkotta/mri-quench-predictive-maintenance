@@ -905,6 +905,95 @@
       "importance": 0.0010880789682269096
     }
   ],
+  "shap": {
+    "model": "HistGradientBoostingClassifier",
+    "n_explained": 7699,
+    "expected_value": -6.904935,
+    "case_index": 182,
+    "top_factors": [
+      {
+        "feature": "v_rms_rollmax_1h",
+        "shap_value": 7.865151,
+        "direction": "increases risk"
+      },
+      {
+        "feature": "p_roll30_mean",
+        "shap_value": 2.392919,
+        "direction": "increases risk"
+      },
+      {
+        "feature": "v_rms",
+        "shap_value": 1.442688,
+        "direction": "increases risk"
+      }
+    ],
+    "figures": [
+      "C:\\Users\\avina\\OneDrive\\Documents\\Default Project\\mri-quench-predictive-maintenance\\reports\\figures\\shap_beeswarm.png",
+      "C:\\Users\\avina\\OneDrive\\Documents\\Default Project\\mri-quench-predictive-maintenance\\reports\\figures\\shap_waterfall_case182.png"
+    ],
+    "global_importance": [
+      {
+        "feature": "v_rms_rollmax_1h",
+        "mean_abs_shap": 1.872183
+      },
+      {
+        "feature": "p_roll30_mean",
+        "mean_abs_shap": 0.565008
+      },
+      {
+        "feature": "v_rms",
+        "mean_abs_shap": 0.452341
+      },
+      {
+        "feature": "p_roll5_mean",
+        "mean_abs_shap": 0.22462
+      },
+      {
+        "feature": "v_resonance",
+        "mean_abs_shap": 0.211829
+      },
+      {
+        "feature": "v_fault_rollmean_1h",
+        "mean_abs_shap": 0.120051
+      },
+      {
+        "feature": "t_mean",
+        "mean_abs_shap": 0.085114
+      },
+      {
+        "feature": "p_mean",
+        "mean_abs_shap": 0.050231
+      },
+      {
+        "feature": "p_last",
+        "mean_abs_shap": 0.048246
+      },
+      {
+        "feature": "t_trend_7d",
+        "mean_abs_shap": 0.017666
+      },
+      {
+        "feature": "t_last",
+        "mean_abs_shap": 0.016644
+      },
+      {
+        "feature": "rf_rollmax_1h",
+        "mean_abs_shap": 0.015297
+      },
+      {
+        "feature": "t_max",
+        "mean_abs_shap": 0.015165
+      },
+      {
+        "feature": "t_roll_std",
+        "mean_abs_shap": 0.007376
+      },
+      {
+        "feature": "v_fault_energy",
+        "mean_abs_shap": 0.006743
+      }
+    ]
+  },
   "training": {
     "best_val_pr_auc": 0.994698849081793,
     "epochs_run": 10

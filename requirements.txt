@@ -23,5 +23,11 @@ pytest>=8.0
 # Data quality gates (Bronze -> Silver medallion pipeline)
 great-expectations>=1.3
 
+# XAI (SHAP TreeExplainer on the hist_gbdt baseline)
+shap>=0.45
+
+# Experiment tracking + model registry (file store under mlruns/, git-ignored)
+mlflow>=3.0
+
 # Interactive HTML report (scripts/build_report.py)
 plotly>=5.18
