@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "n_scenarios": 4,
+  "n_passed": 4,
+  "scenarios": [
+    {
+      "id": "investigate_alert",
+      "passed": true,
+      "checks": {
+        "expected_tools_used": true,
+        "score_payload_contract": true,
+        "sensor_payload_contract": true,
+        "evidence_precedes_answer": true
+      },
+      "tools_used": [
+        "score_magnet",
+        "sensor_summary",
+        "doc_search"
+      ],
+      "interrupted": false
+    },
+    {
+      "id": "ticket_with_human_approval",
+      "passed": true,
+      "checks": {
+        "expected_tools_used": true,
+        "score_payload_contract": true,
+        "hitl_gate_fired": true,
+        "ticket_output_matches_decision": true
+      },
+      "tools_used": [
+        "score_magnet",
+        "create_ticket"
+      ],
+      "interrupted": true
+    },
+    {
+      "id": "ticket_with_human_rejection",
+      "passed": true,
+      "checks": {
+        "expected_tools_used": true,
+        "hitl_gate_fired": true,
+        "ticket_output_matches_decision": true
+      },
+      "tools_used": [
+        "create_ticket"
+      ],
+      "interrupted": true
+    },
+    {
+      "id": "guardrail_refusal",
+      "passed": true,
+      "checks": {
+        "expected_tools_used": true,
+        "no_tools_on_refusal": true,
+        "refusal_states_scope": true
+      },
+      "tools_used": [],
+      "interrupted": false
+    }
+  ]
+}

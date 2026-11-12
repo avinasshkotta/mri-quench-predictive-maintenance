@@ -126,7 +126,11 @@ def main() -> int:
     from langchain_openai import ChatOpenAI
 
     from quenchguard.agent import build_graph
+    from quenchguard.llmops import configure_tracing
 
+    tracing = configure_tracing()
+    if tracing:
+        print("LangSmith tracing enabled (LANGCHAIN_PROJECT=quenchguard)")
     llm = ChatOpenAI(model=args.model, temperature=0)
     graph = build_graph(llm)
     print(f"QuenchGuard agent ready (model={args.model}, tools bound, "

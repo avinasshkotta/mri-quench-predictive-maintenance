@@ -75,6 +75,7 @@ mri-quench-predictive-maintenance/
 │   ├── build_notebook.py                      # build + execute + export notebook HTML
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
+│   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
 │   └── serve.py                               # uvicorn entry point for the API
 ├── src/quenchguard/
 │   ├── config.py          # every physics threshold, split, cost — one place
@@ -91,14 +92,15 @@ mri-quench-predictive-maintenance/
 │   ├── tracking.py        # MLflow experiment tracking + model registry
 │   ├── serving.py         # FastAPI: /predict with SHAP top-factors
 │   ├── monitoring.py      # Evidently PSI drift checks (retraining trigger)
-│   └── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
+│   ├── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
+│   └── llmops.py          # token/cost ledger + LangSmith config + eval rows
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 75 pytest tests (leakage, quality, XAI, tracking, API, drift, agent)
+├── tests/                 # 86 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -119,7 +121,12 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 75 tests
+python -m pytest                          # 86 tests
+
+# agent observability + evaluation (LLMOps)
+python scripts/eval_agent.py              # offline structural eval -> reports/agent_eval.json
+python scripts/eval_agent.py --ragas      # + RAGAS faithfulness (needs OPENAI_API_KEY)
+# LangSmith tracing (optional): set LANGCHAIN_API_KEY before scripts/agent_demo.py
 
 # maintenance agent (LangGraph tool loop + OpenAI; requires OPENAI_API_KEY)
 $env:OPENAI_API_KEY = "sk-..."             # PowerShell
@@ -208,6 +215,15 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
     `interrupt`: nothing is written until a human operator approves (EU AI Act
     Art. 14 oversight enforced at the orchestration level). Checkpointed per
     `thread_id`; tests run against a scripted LLM, so CI needs no API key.
+11. **LLMOps: cost, tracing, evaluation** — a token ledger scrapes real usage
+    from AI messages and prices it against a rate table into
+    `reports/agent_costs.json`; LangSmith tracing is opt-in via
+    `LANGCHAIN_API_KEY` (no hard dependency); an offline evaluation harness
+    (`scripts/eval_agent.py`) runs four scenarios through the *real* graph and
+    asserts the behavioural contract — tool order, tool payload contracts from
+    the actual model/data, the HITL invariant, guardrail refusal — into
+    `reports/agent_eval.json`, with optional RAGAS faithfulness scoring when an
+    OpenAI key is available.
 
 ---
 
@@ -241,6 +257,10 @@ Plus 13 agent tests: TF-IDF RAG ranking, tool-loop round-trip, system-prompt gat
 scripted guardrail refusal, HITL interrupt → approval writes the ticket while
 rejection blocks it, thread isolation (checkpointing), ticket markdown format, and
 real-model tool calls (skip when artifacts are absent).
+Plus 11 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
+totals/persistence, usage scraping from AI messages, LangSmith env handling (incl.
+no os.environ mutation), transcript flattening for RAGAS rows, and the full offline
+eval harness (4/4 scenarios, incl. the ticket-without-approval filesystem invariant).
 
 ---
 

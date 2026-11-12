@@ -36,6 +36,9 @@ evidently>=0.7
 langgraph>=1.2
 langchain-openai>=1.0          # OpenAI Chat models (needs OPENAI_API_KEY)
 langgraph-checkpoint-sqlite>=3.0   # durable thread checkpointing (optional use)
+ragas>=0.4                     # optional: scripts/eval_agent.py --ragas
+# note: ragas 0.4.3 imports a module removed in langchain-community>=0.4;
+# scripts/eval_agent.py shims it automatically for the --ragas path
 
 # Serving layer (scripts/serve.py, Dockerfile)
 fastapi>=0.115
