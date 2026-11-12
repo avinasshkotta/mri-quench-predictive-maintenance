@@ -194,6 +194,15 @@ def main() -> int:
         f"{f['feature']} ({f['shap_value']:+.3f}, {f['direction']})"
         for f in shap_info["top_factors"]))
 
+    # 9 -- drift monitoring (retraining trigger) ---------------------------------------
+    print("\n[monitor] Evidently PSI drift (train reference vs test current)")
+    from quenchguard.monitoring import run_drift_check
+
+    drift = run_drift_check(
+        reference=labelled.loc[labelled.split == "train", FEATURE_COLUMNS],
+        current=labelled.loc[labelled.split == "test", FEATURE_COLUMNS],
+    )
+
     payload = {
         "config": {
             "sequence_length": cfg.window.seq_len,
@@ -211,6 +220,7 @@ def main() -> int:
         "results": report,
         "importance": imp.head(15).to_dict(orient="records"),
         "shap": shap_info,
+        "drift": drift,
         "training": {"best_val_pr_auc": float(max(h["val_ap"] for h in history)),
                      "epochs_run": len(history)},
     }

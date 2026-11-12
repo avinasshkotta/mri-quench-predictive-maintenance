@@ -26,8 +26,11 @@ great-expectations>=1.3
 # XAI (SHAP TreeExplainer on the hist_gbdt baseline)
 shap>=0.45
 
-# Experiment tracking + model registry (file store under mlruns/, git-ignored)
+# Experiment tracking + model registry (SQLite store at ./mlflow.db)
 mlflow>=3.0
+
+# Drift monitoring (Evidently PSI, scripts/monitor.py)
+evidently>=0.7
 
 # Serving layer (scripts/serve.py, Dockerfile)
 fastapi>=0.115

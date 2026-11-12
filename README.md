@@ -69,10 +69,11 @@ mri-quench-predictive-maintenance/
 ├── notebooks/
 │   └── 01_predictive_maintenance_lstm.ipynb   # executed walkthrough (16 steps)
 ├── scripts/
-│   ├── run_pipeline.py                        # data → medallion → model → XAI → reports
+│   ├── run_pipeline.py                        # data → medallion → model → XAI → drift → reports
 │   ├── build_medallion.py                     # Bronze → Silver → Gold + quality gates
 │   ├── build_report.py                        # interactive HTML dashboard (Plotly)
 │   ├── build_notebook.py                      # build + execute + export notebook HTML
+│   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
 │   └── serve.py                               # uvicorn entry point for the API
 ├── src/quenchguard/
 │   ├── config.py          # every physics threshold, split, cost — one place
@@ -87,14 +88,15 @@ mri-quench-predictive-maintenance/
 │   ├── evaluate.py        # threshold policy, lead time, cost model, plots
 │   ├── explain.py         # SHAP: TreeExplainer global/local explanations
 │   ├── tracking.py        # MLflow experiment tracking + model registry
-│   └── serving.py         # FastAPI: /predict with SHAP top-factors
+│   ├── serving.py         # FastAPI: /predict with SHAP top-factors
+│   └── monitoring.py      # Evidently PSI drift checks (retraining trigger)
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 52 pytest tests (leakage, quality, XAI, tracking, API)
+├── tests/                 # 61 pytest tests (leakage, quality, XAI, tracking, API, drift)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -115,10 +117,14 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 52 tests
+python -m pytest                          # 61 tests
 
 # experiment tracking + model registry (SQLite store at ./mlflow.db)
 mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000   # browse runs
+
+# drift monitoring (retraining trigger; --check exits 1 when it fires)
+python scripts/monitor.py                  # train-vs-test PSI report + drift_report.html
+python scripts/monitor.py --check          # CI mode: non-zero exit on retraining trigger
 
 # serving: LSTM + SHAP explanations over HTTP
 python scripts/serve.py                   # http://127.0.0.1:8000/docs
@@ -183,6 +189,11 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
    artifacts to MLflow (SQLite store, `mlflow.db`), and the trained LSTM is registered
    as `quenchguard_lstm` with the `champion` alias. Tracking failures are warnings, never
    pipeline failures.
+9. **Drift monitoring as the retraining trigger** — Evidently PSI (alert > 0.2) between
+   the train-split reference and the current batch; a retraining recommendation fires
+   when any SHAP-key feature drifts or > 25 % of features drift (`scripts/monitor.py
+   --check` is CI-ready). The pipeline writes the verdict to `metrics.json → drift`,
+   `reports/drift.json` and `reports/drift_report.html`.
 
 ---
 
@@ -208,6 +219,10 @@ Plus 9 serving tests: health/model-info contracts, probability + alert + top-3 S
 factors in `/predict`, shape and NaN rejection (422), determinism across calls,
 degraded mode when artifacts are missing (503), and `Artifacts.load` round-trip from
 disk.
+Plus 9 drift tests: PSI flags a shifted synthetic feature and stays quiet on stable
+ones, retraining verdicts (key-feature drift, fleet-wide share, all-stable), bad-input
+rejection, `metrics.json` key-feature extraction, report writing, and (when gold data
+exists) the real train-vs-test check.
 
 ---
 
