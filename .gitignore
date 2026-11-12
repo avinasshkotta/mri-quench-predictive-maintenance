@@ -36,6 +36,9 @@ mlflow.db
 mlruns/
 mlartifacts/
 
+# ---- Agent-generated tickets (runtime artifacts) ----
+reports/tickets/
+
 # ---- Local env ----
 .env
 *.log

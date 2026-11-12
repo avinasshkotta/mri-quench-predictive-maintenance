@@ -32,6 +32,11 @@ mlflow>=3.0
 # Drift monitoring (Evidently PSI, scripts/monitor.py)
 evidently>=0.7
 
+# Agentic layer (LangGraph tool loop + OpenAI, scripts/agent_demo.py)
+langgraph>=1.2
+langchain-openai>=1.0          # OpenAI Chat models (needs OPENAI_API_KEY)
+langgraph-checkpoint-sqlite>=3.0   # durable thread checkpointing (optional use)
+
 # Serving layer (scripts/serve.py, Dockerfile)
 fastapi>=0.115
 uvicorn>=0.30

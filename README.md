@@ -74,6 +74,7 @@ mri-quench-predictive-maintenance/
 │   ├── build_report.py                        # interactive HTML dashboard (Plotly)
 │   ├── build_notebook.py                      # build + execute + export notebook HTML
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
+│   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   └── serve.py                               # uvicorn entry point for the API
 ├── src/quenchguard/
 │   ├── config.py          # every physics threshold, split, cost — one place
@@ -89,14 +90,15 @@ mri-quench-predictive-maintenance/
 │   ├── explain.py         # SHAP: TreeExplainer global/local explanations
 │   ├── tracking.py        # MLflow experiment tracking + model registry
 │   ├── serving.py         # FastAPI: /predict with SHAP top-factors
-│   └── monitoring.py      # Evidently PSI drift checks (retraining trigger)
+│   ├── monitoring.py      # Evidently PSI drift checks (retraining trigger)
+│   └── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 61 pytest tests (leakage, quality, XAI, tracking, API, drift)
+├── tests/                 # 75 pytest tests (leakage, quality, XAI, tracking, API, drift, agent)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -117,7 +119,12 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 61 tests
+python -m pytest                          # 75 tests
+
+# maintenance agent (LangGraph tool loop + OpenAI; requires OPENAI_API_KEY)
+$env:OPENAI_API_KEY = "sk-..."             # PowerShell
+python scripts/agent_demo.py              # 3 scenarios: investigate, HITL ticket, guardrail
+python scripts/agent_demo.py --interactive
 
 # experiment tracking + model registry (SQLite store at ./mlflow.db)
 mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000   # browse runs
@@ -194,6 +201,13 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
    when any SHAP-key feature drifts or > 25 % of features drift (`scripts/monitor.py
    --check` is CI-ready). The pipeline writes the verdict to `metrics.json → drift`,
    `reports/drift.json` and `reports/drift_report.html`.
+10. **Agentic coordination with human-in-the-loop** — a LangGraph ReAct agent
+    (`agent.py`) investigates alerts with *real* tools (champion-LSTM scoring, raw
+    telemetry from the silver layer, TF-IDF RAG over the model card/case study/README)
+    and drafts service tickets — but `create_ticket` sits behind a LangGraph
+    `interrupt`: nothing is written until a human operator approves (EU AI Act
+    Art. 14 oversight enforced at the orchestration level). Checkpointed per
+    `thread_id`; tests run against a scripted LLM, so CI needs no API key.
 
 ---
 
@@ -223,6 +237,10 @@ Plus 9 drift tests: PSI flags a shifted synthetic feature and stays quiet on sta
 ones, retraining verdicts (key-feature drift, fleet-wide share, all-stable), bad-input
 rejection, `metrics.json` key-feature extraction, report writing, and (when gold data
 exists) the real train-vs-test check.
+Plus 13 agent tests: TF-IDF RAG ranking, tool-loop round-trip, system-prompt gating,
+scripted guardrail refusal, HITL interrupt → approval writes the ticket while
+rejection blocks it, thread isolation (checkpointing), ticket markdown format, and
+real-model tool calls (skip when artifacts are absent).
 
 ---
 

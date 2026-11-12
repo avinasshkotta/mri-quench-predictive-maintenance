@@ -20,8 +20,10 @@
 * **In scope:** early warning of MRI magnet quench for clinical engineering
   teams, ≥ 72 h before the event, to enable planned service instead of
   emergency repair.
-* **Out of scope:** autonomous action. Alerts require human confirmation
-  before any technician dispatch (EU AI Act Art. 14 human oversight).
+* **Out of scope:** autonomous action. The LangGraph maintenance agent may
+  investigate and *draft* tickets, but `create_ticket` sits behind a
+  LangGraph `interrupt` — a human operator approves or rejects before anything
+  is written (EU AI Act Art. 14 human oversight, enforced by orchestration).
 * **Users:** MRI service coordinators, clinical engineering, vendor field
   engineers.
 
@@ -54,7 +56,10 @@ _Benchmark baselines (same features): HistGBDT PR-AUC 0.997, LogReg 0.975._
   beeswarm + per-prediction waterfall (`reports/figures/shap_*.png`,
   `metrics.json → shap`).
 * **Gradient attribution** for the LSTM (`importance` in `metrics.json`).
-* Serving-time responses include the top-3 contributing features.
+* Serving-time responses include the top-3 contributing features
+  (`/predict → explanation`).
+* The maintenance agent (`scripts/agent_demo.py`) cites the same SHAP factors
+  and this card's documentation (TF-IDF RAG) when it drafts tickets.
 
 ## Fairness _(Phase G)_
 
