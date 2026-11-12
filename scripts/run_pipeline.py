@@ -161,6 +161,15 @@ def main() -> int:
         "seq_len": cfg.window.seq_len, "horizon_hours": cfg.window.horizon_hours,
         "val_pr_auc": float(max(h["val_ap"] for h in history)),
     })
+    # Serving artifacts (Phase C): the scaler must travel with the model or the
+    # API would score unscaled inputs (training/serving skew), and the HistGBDT
+    # is what produces SHAP explanations at request time.
+    import joblib
+
+    from quenchguard.config import MODELS_DIR
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(_scaler, MODELS_DIR / "scaler.joblib")
+    joblib.dump(models["hist_gbdt"], MODELS_DIR / "hist_gbdt.joblib")
     if sweeps:
         sweep_all = pd.concat(
             [sw.assign(model=name) for name, sw in sweeps.items()], ignore_index=True)

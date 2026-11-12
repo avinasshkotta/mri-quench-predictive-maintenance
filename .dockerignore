@@ -1,0 +1,22 @@
+.git
+.github
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+
+# runtime data — not needed to serve a trained model
+data/
+reports/
+mlruns/
+mlartifacts/
+mlflow.db
+notebooks/
+tests/
+*.md
+!docs/*.md
+.env
+*.log

@@ -59,6 +59,34 @@ jobs:
       - name: Build interactive HTML report
         run: python scripts/build_report.py
 
+      - name: Build serving image
+        run: docker build -t quenchguard:ci .
+
+      - name: Smoke-test the API in Docker
+        run: |
+          docker run -d --name qg -p 8000:8000 quenchguard:ci
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/model-info > /tmp/model-info.json && break
+            sleep 2
+          done
+          test -s /tmp/model-info.json
+          curl -sf http://127.0.0.1:8000/health
+          python - <<'PY'
+          import json, urllib.request
+          import numpy as np
+          info = json.load(open('/tmp/model-info.json'))
+          window = np.zeros((info['seq_len'], info['n_features'])).tolist()
+          req = urllib.request.Request(
+              'http://127.0.0.1:8000/predict',
+              data=json.dumps({'magnet_id': 'ci', 'window': window}).encode(),
+              headers={'content-type': 'application/json'})
+          body = json.load(urllib.request.urlopen(req))
+          assert 0.0 <= body['quench_probability'] <= 1.0, body
+          assert len(body['explanation']) == 3, body
+          print('predict OK:', body['quench_probability'], 'alert=', body['alert'])
+          PY
+          docker rm -f qg
+
       - name: Upload reports
         uses: actions/upload-artifact@v4
         with:

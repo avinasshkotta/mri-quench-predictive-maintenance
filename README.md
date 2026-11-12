@@ -69,10 +69,11 @@ mri-quench-predictive-maintenance/
 ├── notebooks/
 │   └── 01_predictive_maintenance_lstm.ipynb   # executed walkthrough (16 steps)
 ├── scripts/
-│   ├── run_pipeline.py                        # data → medallion → model → reports
+│   ├── run_pipeline.py                        # data → medallion → model → XAI → reports
 │   ├── build_medallion.py                     # Bronze → Silver → Gold + quality gates
 │   ├── build_report.py                        # interactive HTML dashboard (Plotly)
-│   └── build_notebook.py                      # build + execute + export notebook HTML
+│   ├── build_notebook.py                      # build + execute + export notebook HTML
+│   └── serve.py                               # uvicorn entry point for the API
 ├── src/quenchguard/
 │   ├── config.py          # every physics threshold, split, cost — one place
 │   ├── data_gen.py        # synthetic multi-rate streams + labelled events (BRONZE)
@@ -85,17 +86,20 @@ mri-quench-predictive-maintenance/
 │   ├── lstm.py            # model, training loop, gradient attribution
 │   ├── evaluate.py        # threshold policy, lead time, cost model, plots
 │   ├── explain.py         # SHAP: TreeExplainer global/local explanations
-│   └── tracking.py        # MLflow experiment tracking + model registry
+│   ├── tracking.py        # MLflow experiment tracking + model registry
+│   └── serving.py         # FastAPI: /predict with SHAP top-factors
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
-├── tests/                 # 43 pytest tests (leakage guards, quality gates, XAI, tracking)
+├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
+├── tests/                 # 52 pytest tests (leakage, quality, XAI, tracking, API)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
 │   └── model_card.md      # model card, attached to every MLflow run
+├── Dockerfile             # serving image (FastAPI + CPU torch)
 ├── requirements.txt
 └── pyproject.toml
 ```
@@ -111,10 +115,20 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 43 tests
+python -m pytest                          # 52 tests
 
 # experiment tracking + model registry (SQLite store at ./mlflow.db)
 mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000   # browse runs
+
+# serving: LSTM + SHAP explanations over HTTP
+python scripts/serve.py                   # http://127.0.0.1:8000/docs
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d "{\"magnet_id\": \"M3\", \"window\": [[...48 x 36 raw features...]]}"
+
+# containerised serving (build after a pipeline run — models/ must exist)
+docker build -t quenchguard .
+docker run --rm -p 8000:8000 quenchguard
 
 # data layer only (Bronze → Silver → Gold, with quality gates)
 python scripts/build_medallion.py          # build all three layers
@@ -190,6 +204,10 @@ Plus 9 Phase B tests: SHAP top-factor ordering/direction and the efficiency prop
 flattening, param/metric/tag logging to an isolated SQLite store, `champion` alias
 registration with model round-trip loading, and the guarantee that a tracking outage
 returns `None` instead of raising.
+Plus 9 serving tests: health/model-info contracts, probability + alert + top-3 SHAP
+factors in `/predict`, shape and NaN rejection (422), determinism across calls,
+degraded mode when artifacts are missing (503), and `Artifacts.load` round-trip from
+disk.
 
 ---
 
