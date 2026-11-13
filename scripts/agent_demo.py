@@ -58,8 +58,8 @@ def scenario_1(graph) -> None:
     print("=" * 70)
     for update in graph.stream(
             {"messages": [("user",
-                           "Our dashboard shows an alert. Which magnet is at the "
-                           "highest quench risk right now, what does the model say, "
+                           "Run a fleet check: which magnet is at the highest "
+                           "quench risk right now, what does the model say, "
                            "and is there physical evidence in the sensors? "
                            "Ground your answer in the project documentation.")]},
             {"configurable": {"thread_id": "s1"}}, stream_mode="updates"):
@@ -110,7 +110,19 @@ def scenario_3(graph) -> None:
         _print_step(update)
 
 
+def _utf8_console() -> None:
+    """Windows consoles default to cp1252; the demo prints emoji."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            enc = (getattr(stream, "encoding", "") or "").lower().replace("-", "")
+            if enc != "utf8":
+                stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> int:
+    _utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="gpt-4o-mini")
@@ -118,15 +130,19 @@ def main() -> int:
                     help="chat loop instead of canned scenarios")
     args = ap.parse_args()
 
+    from quenchguard.llmops import configure_tracing, load_env
+
+    load_env()                       # repo .env (git-ignored), real env wins
+
     if not os.environ.get("OPENAI_API_KEY"):
         print("OPENAI_API_KEY not set. In PowerShell:\n"
-              '  $env:OPENAI_API_KEY = "sk-..."')
+              '  $env:OPENAI_API_KEY = "sk-..."\n'
+              "or put OPENAI_API_KEY=sk-... in the repo's .env file")
         return 2
 
     from langchain_openai import ChatOpenAI
 
     from quenchguard.agent import build_graph
-    from quenchguard.llmops import configure_tracing
 
     tracing = configure_tracing()
     if tracing:
@@ -162,9 +178,19 @@ def main() -> int:
                     print(f"  🤖 {final['messages'][-1].content[:400]}")
         return 0
 
-    scenario_1(graph)
-    scenario_2(graph)
-    scenario_3(graph)
+    try:
+        scenario_1(graph)
+        scenario_2(graph)
+        scenario_3(graph)
+    except Exception as exc:
+        from openai import AuthenticationError
+
+        if isinstance(exc, AuthenticationError):
+            print("\nOpenAI rejected the API key (expired or invalid).")
+            print("Create a new key at https://platform.openai.com/api-keys, "
+                  "update .env (OPENAI_API_KEY=sk-...), then retry.")
+            return 3
+        raise
     return 0
 
 

@@ -22,6 +22,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from quenchguard.agent_eval import run_eval              # noqa: E402
 from quenchguard.config import REPORTS_DIR               # noqa: E402
+from quenchguard.llmops import load_env                  # noqa: E402
 
 
 def main() -> int:
@@ -33,6 +34,8 @@ def main() -> int:
     ap.add_argument("--min-pass", type=int, default=None,
                     help="fail (exit 1) when fewer than N scenarios pass")
     args = ap.parse_args()
+
+    load_env()                       # repo .env (git-ignored), real env wins
 
     summary = run_eval(out_dir=REPORTS_DIR)
     print(f"agent eval: {summary['n_passed']}/{summary['n_scenarios']} scenarios passed "

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -12,7 +13,8 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from quenchguard.llmops import (PRICE_TABLE, TokenLedger, configure_tracing,
-                                estimate_cost, transcript_to_eval_rows)
+                                estimate_cost, load_env,
+                                transcript_to_eval_rows)
 
 
 # --------------------------------------------------------------------------------------
@@ -80,6 +82,17 @@ def test_tracing_never_mutates_real_env_in_tests(monkeypatch):
     monkeypatch.delenv("LANGCHAIN_TRACING_V2", raising=False)
     configure_tracing(env={"LANGCHAIN_API_KEY": "lsv2_test"})
     assert "LANGCHAIN_TRACING_V2" not in __import__("os").environ
+
+
+def test_load_env_reads_dotenv_without_overriding_real_env(monkeypatch, tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=from-file\nLANGCHAIN_PROJECT=from-file\n",
+                        encoding="utf-8")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("LANGCHAIN_PROJECT", "from-env")
+    load_env(env_file)
+    assert os.environ["OPENAI_API_KEY"] == "from-file"
+    assert os.environ["LANGCHAIN_PROJECT"] == "from-env"     # real env always wins
 
 
 # --------------------------------------------------------------------------------------

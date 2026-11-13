@@ -38,6 +38,7 @@ fairlearn>=0.15
 # Agentic layer (LangGraph tool loop + OpenAI, scripts/agent_demo.py)
 langgraph>=1.2
 langchain-openai>=1.0          # OpenAI Chat models (needs OPENAI_API_KEY)
+python-dotenv>=1.0             # load the git-ignored repo .env for local demos
 langgraph-checkpoint-sqlite>=3.0   # durable thread checkpointing (optional use)
 ragas>=0.4                     # optional: scripts/eval_agent.py --ragas
 # note: ragas 0.4.3 imports a module removed in langchain-community>=0.4;

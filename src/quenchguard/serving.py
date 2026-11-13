@@ -30,6 +30,7 @@ from typing import Any
 
 import joblib
 import numpy as np
+import pandas as pd
 import shap
 import torch
 from fastapi import FastAPI, HTTPException
@@ -139,7 +140,14 @@ class Artifacts:
 
     def predict(self, window: np.ndarray) -> dict[str, Any]:
         """Score one raw window; returns the JSON-serialisable response body."""
-        xs = self.scaler.transform(window)                      # (seq_len, f), scaled
+        # The production scaler was fitted on a named DataFrame; passing a bare
+        # array triggers sklearn's feature-name warning (and is less safe).
+        # Injected test scalers may be fitted without names, so check first.
+        if getattr(self.scaler, "feature_names_in_", None) is not None:
+            frame = pd.DataFrame(window, columns=self.feature_names)
+            xs = self.scaler.transform(frame)                   # (seq_len, f), scaled
+        else:
+            xs = self.scaler.transform(window)
         with torch.no_grad():
             logit = self.model(torch.from_numpy(xs[None, ...]).float())
             prob = float(torch.sigmoid(logit).item())

@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .config import REPORTS_DIR
+from .config import REPORTS_DIR, REPO_ROOT
 
 # USD per 1M tokens (update here when the model price changes)
 PRICE_TABLE: dict[str, tuple[float, float]] = {
@@ -94,6 +94,23 @@ class TokenLedger:
 
 
 # --------------------------------------------------------------------------------------
+# local environment (.env)
+# --------------------------------------------------------------------------------------
+def load_env(path: str | Path | None = None) -> None:
+    """Load the repo's git-ignored ``.env`` without shadowing real env vars.
+
+    Real environment variables always win (``override=False``), so CI secrets
+    are never replaced by a stale local file. No-op when python-dotenv is
+    absent or the file does not exist.
+    """
+    try:
+        from dotenv import load_dotenv
+    except ImportError:                     # pragma: no cover - optional dep
+        return
+    load_dotenv(Path(path) if path else REPO_ROOT / ".env", override=False)
+
+
+# --------------------------------------------------------------------------------------
 # tracing (opt-in)
 # --------------------------------------------------------------------------------------
 def configure_tracing(project: str = "quenchguard",
@@ -153,5 +170,5 @@ def _row(question: str, answer: str, evidence: list[str]) -> dict[str, str]:
     }
 
 
-__all__ = ["TokenLedger", "estimate_cost", "configure_tracing",
+__all__ = ["TokenLedger", "estimate_cost", "configure_tracing", "load_env",
            "transcript_to_eval_rows", "PRICE_TABLE"]

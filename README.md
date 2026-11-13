@@ -105,7 +105,7 @@ mri-quench-predictive-maintenance/
 │   ├── external/cmapss/   # NASA FD001 files (downloaded on demand, git-ignored)
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 107 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
+├── tests/                 # 108 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -128,7 +128,7 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 107 tests
+python -m pytest                          # 108 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
@@ -143,7 +143,8 @@ python scripts/eval_agent.py --ragas      # + RAGAS faithfulness (needs OPENAI_A
 # LangSmith tracing (optional): set LANGCHAIN_API_KEY before scripts/agent_demo.py
 
 # maintenance agent (LangGraph tool loop + OpenAI; requires OPENAI_API_KEY)
-$env:OPENAI_API_KEY = "sk-..."             # PowerShell
+# put OPENAI_API_KEY=sk-... in the repo's .env (copy .env.example; git-ignored)
+$env:OPENAI_API_KEY = "sk-..."             # or export it in PowerShell
 python scripts/agent_demo.py              # 3 scenarios: investigate, HITL ticket, guardrail
 python scripts/agent_demo.py --interactive
 
@@ -291,9 +292,10 @@ Plus 13 agent tests: TF-IDF RAG ranking, tool-loop round-trip, system-prompt gat
 scripted guardrail refusal, HITL interrupt → approval writes the ticket while
 rejection blocks it, thread isolation (checkpointing), ticket markdown format, and
 real-model tool calls (skip when artifacts are absent).
-Plus 11 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
+Plus 12 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
 totals/persistence, usage scraping from AI messages, LangSmith env handling (incl.
-no os.environ mutation), transcript flattening for RAGAS rows, and the full offline
+no os.environ mutation), git-ignored `.env` loading that never overrides real env
+vars, transcript flattening for RAGAS rows, and the full offline
 eval harness (4/4 scenarios, incl. the ticket-without-approval filesystem invariant).
 Plus 8 fairness tests: MetricFrame contract (selection / TPR / FPR / count per
 magnet), hard failure when a magnet misses its events, clean magnets that never
