@@ -50,6 +50,26 @@
 
 _Benchmark baselines (same features): HistGBDT PR-AUC 0.997, LogReg 0.975._
 
+## External validation (NASA C-MAPSS FD001)
+
+The MRI data is synthetic, so the **methodology** was validated on public
+run-to-failure turbofan data the authors did not generate. A HistGBDT with the
+same causal rolling-feature philosophy, engine-grouped 80/20 split and
+false-alert-budgeted threshold reaches, on NASA's 100 official test engines:
+
+| Metric | Value |
+|---|---|
+| PR-AUC | 0.892 |
+| Event recall (detected at all) | 84 % (21/25 observable engines) |
+| Event recall at ≥ 15-cycle lead | 75 % (12/16 evaluable engines) |
+| False alerts | 0.18 per engine (budget 0.6) |
+
+This validates the **decision framework**, not the MRI LSTM weights — a
+different sensor set and physics make transfer meaningless, and no dollar cost
+model exists in C-MAPSS. Full protocol, censoring caveats and limitations:
+[`docs/external_validation.md`](external_validation.md). Reproduce with
+`python scripts/validate_cmapss.py --download`.
+
 ## Explainability
 
 * **Global + local SHAP** (TreeExplainer) on the `hist_gbdt` baseline —
@@ -120,8 +140,10 @@ Oversight is enforced by orchestration, not by prompt instructions:
 
 ## Limitations
 
-* Trained on **synthetic** data; physics parameters are plausible, not
-  clinically validated. Real-site fine-tuning required before production use.
+* Trained on **synthetic** MRI data; physics parameters are plausible, not
+  clinically validated. The *methodology* is externally validated on NASA
+  C-MAPSS FD001, but the MRI model itself still needs real-site fine-tuning
+  and a prospective silent trial before production use.
 * Study period is 90 days — seasonal duty-cycle shifts are not represented.
 * Scores are only meaningful for the 36 documented features with the same
   15-min windowing (training-serving skew risk if windowing changes).

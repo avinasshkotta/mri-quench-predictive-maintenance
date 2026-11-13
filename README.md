@@ -75,6 +75,7 @@ mri-quench-predictive-maintenance/
 │   ├── build_notebook.py                      # build + execute + export notebook HTML
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
 │   ├── audit_fairness.py                      # fleet fairness CLI (--check exits 1 on policy fail)
+│   ├── validate_cmapss.py                     # NASA C-MAPSS external validation (--download)
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
 │   └── serve.py                               # uvicorn entry point for the API
@@ -95,18 +96,21 @@ mri-quench-predictive-maintenance/
 │   ├── monitoring.py      # Evidently PSI drift checks (retraining trigger)
 │   ├── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
 │   ├── llmops.py          # token/cost ledger + LangSmith config + eval rows
-│   └── fairness.py        # Fairlearn fleet audit (event recall + alert parity)
+│   ├── fairness.py        # Fairlearn fleet audit (event recall + alert parity)
+│   └── external_validation.py  # NASA C-MAPSS FD001 methodology validation
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
+│   ├── external/cmapss/   # NASA FD001 files (downloaded on demand, git-ignored)
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 92 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness)
+├── tests/                 # 107 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
 │   ├── eu_ai_act.md       # AI Act obligation mapping + risk register
+│   ├── external_validation.md  # C-MAPSS protocol, results, censoring caveats
 │   └── model_card.md      # model card, attached to every MLflow run
 ├── Dockerfile             # serving image (FastAPI + CPU torch)
 ├── requirements.txt
@@ -124,7 +128,10 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 92 tests
+python -m pytest                          # 107 tests
+
+# external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
+python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
 
 # governance: fleet fairness audit (Fairlearn, grouped by magnet)
 python scripts/audit_fairness.py          # -> reports/fairness.json (pass/warn/fail)
@@ -241,6 +248,16 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
     CI-ready; results land in `metrics.json → fairness` and
     `reports/fairness.json`. The AI Act mapping and risk register live in
     [`docs/eu_ai_act.md`](docs/eu_ai_act.md).
+13. **External validation on real data** — the MRI data is synthetic, so the
+    *methodology* is validated on NASA C-MAPSS FD001 (100 run-to-failure
+    turbofan engines + 100 official held-out engines): the same causal rolling
+    features, engine-grouped 80/20 split, false-alert-budgeted threshold and
+    event-level lead-time evaluation. HistGBDT reaches **PR-AUC 0.892, 84 %
+    event recall, 75 % in-time recall (≥ 15 cycles), 0.18 false alerts/engine**
+    on the official test set; the logistic baseline is lower on every metric.
+    This is a framework validation, not a model-transfer claim — see
+    [`docs/external_validation.md`](docs/external_validation.md) for the
+    censoring caveats and honest denominators.
 
 ---
 
@@ -283,6 +300,12 @@ magnet), hard failure when a magnet misses its events, clean magnets that never
 page not penalising parity, alert-burden disparity detection, PR-AUC skipping
 magnets without positives, report writing, and the real champion-LSTM audit
 (event recall 100 % on all four event-bearing magnets, verdict `pass`).
+Plus 15 external-validation tests: RUL reconstruction for truncated test engines,
+causality (truncating the future cannot change a past feature), identity/age columns
+excluded from the feature set, episode collapsing that never leaks across engines,
+horizon clamping, censored-engine false-alert accounting, the 25/16 censoring
+denominators, an end-to-end run on synthetic C-MAPSS-shaped files, split validation,
+and — when the NASA files are present — the real FD001 shapes and headline result.
 
 ---
 

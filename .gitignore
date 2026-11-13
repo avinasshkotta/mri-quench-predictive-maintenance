@@ -27,6 +27,13 @@ data/lineage/*
 !data/silver/.gitkeep
 !data/gold/.gitkeep
 
+# ---- External datasets (downloaded on demand, not redistributed) ----
+data/external/*
+!data/external/.gitkeep
+!data/external/cmapss/
+data/external/cmapss/*
+!data/external/cmapss/.gitkeep
+
 # ---- Trained artifacts ----
 models/*
 !models/.gitkeep

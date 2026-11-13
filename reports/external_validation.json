@@ -1,0 +1,146 @@
+{
+  "dataset": {
+    "name": "NASA C-MAPSS FD001",
+    "citation": "Saxena & Goebel (2008), NASA Prognostics Data Repository",
+    "train_rows": 20631,
+    "train_units": 100,
+    "test_rows": 13096,
+    "test_units": 100,
+    "informative_sensors": [
+      "s2",
+      "s3",
+      "s4",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s11",
+      "s12",
+      "s13",
+      "s14",
+      "s15",
+      "s17",
+      "s20",
+      "s21"
+    ],
+    "dropped_constant_sensors": [
+      "s1",
+      "s5",
+      "s10",
+      "s16",
+      "s18",
+      "s19"
+    ],
+    "provenance": {
+      "train_FD001.txt": {
+        "sha256": "963b5e22825b34d8b21c69e1aeb4af3e647050eb672ee8834ba4b5d91d2de0f8",
+        "bytes": 3515356
+      },
+      "test_FD001.txt": {
+        "sha256": "3cda7109ce17bafb5443f2ac926cfcf88154b941b8c4cf95eb55d1ddd6f52851",
+        "bytes": 2228855
+      },
+      "RUL_FD001.txt": {
+        "sha256": "a19c8ec94931949d0485bdc35118206e9c81c4547b422efb9cf86f4ceddbceca",
+        "bytes": 429
+      }
+    }
+  },
+  "protocol": {
+    "horizon_cycles": 30,
+    "min_lead_cycles": 15,
+    "roll_window": 10,
+    "baseline_cycles": 5,
+    "n_train_units": 80,
+    "n_val_units": 20,
+    "false_alert_budget_per_unit": 0.6,
+    "split": "grouped by engine (80 train / 20 validation); NASA test held out",
+    "features": 60,
+    "note": "methodology validation, not MRI model transfer; no dollar costs exist in C-MAPSS so the MRI cost model is not applied"
+  },
+  "results": {
+    "hist_gbdt": {
+      "threshold": 0.383134,
+      "threshold_reason": "best in-time event recall among 27 operating points with <= 0.60 false alerts/engine",
+      "validation": {
+        "pr_auc": 0.9617586446575782,
+        "best_val_event_recall_in_time": 1.0
+      },
+      "test": {
+        "split_size_rows": 13096,
+        "n_units": 100,
+        "n_units_with_event": 100,
+        "n_observable_events": 25,
+        "n_evaluable_in_time": 16,
+        "threshold": 0.383134,
+        "window": {
+          "pr_auc": 0.8924968942800375,
+          "roc_auc": 0.9967562194877914,
+          "precision": 0.826530612244898,
+          "recall": 0.7319277108433735,
+          "f1": 0.7763578274760383,
+          "positive_rate": 0.02535125229077581
+        },
+        "events": {
+          "event_recall": 0.84,
+          "event_recall_in_time": 0.75,
+          "detected": 21,
+          "detected_in_time": 12,
+          "lead_median": 28.0,
+          "lead_min": 21.0,
+          "lead_max": 30.0,
+          "lead_median_unclamped": 28.0,
+          "lead_max_unclamped": 38.0
+        },
+        "alerts": {
+          "episodes": 51,
+          "false_alerts": 18,
+          "false_per_unit": 0.18,
+          "false_per_1000_cycles": 1.3744654856444716
+        }
+      }
+    },
+    "logreg": {
+      "threshold": 0.808939,
+      "threshold_reason": "best in-time event recall among 26 operating points with <= 0.60 false alerts/engine",
+      "validation": {
+        "pr_auc": 0.952042935176022,
+        "best_val_event_recall_in_time": 1.0
+      },
+      "test": {
+        "split_size_rows": 13096,
+        "n_units": 100,
+        "n_units_with_event": 100,
+        "n_observable_events": 25,
+        "n_evaluable_in_time": 16,
+        "threshold": 0.808939,
+        "window": {
+          "pr_auc": 0.8640548260288412,
+          "roc_auc": 0.9954800398711738,
+          "precision": 0.9010416666666666,
+          "recall": 0.5210843373493976,
+          "f1": 0.6603053435114504,
+          "positive_rate": 0.02535125229077581
+        },
+        "events": {
+          "event_recall": 0.68,
+          "event_recall_in_time": 0.5,
+          "detected": 17,
+          "detected_in_time": 8,
+          "lead_median": 26.0,
+          "lead_min": 17.0,
+          "lead_max": 30.0,
+          "lead_median_unclamped": 26.0,
+          "lead_max_unclamped": 37.0
+        },
+        "alerts": {
+          "episodes": 38,
+          "false_alerts": 9,
+          "false_per_unit": 0.09,
+          "false_per_1000_cycles": 0.6872327428222358
+        }
+      }
+    }
+  },
+  "champion": "hist_gbdt"
+}
