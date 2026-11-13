@@ -69,11 +69,12 @@ mri-quench-predictive-maintenance/
 ├── notebooks/
 │   └── 01_predictive_maintenance_lstm.ipynb   # executed walkthrough (16 steps)
 ├── scripts/
-│   ├── run_pipeline.py                        # data → medallion → model → XAI → drift → reports
+│   ├── run_pipeline.py                        # data → medallion → model → XAI → drift → fairness → reports
 │   ├── build_medallion.py                     # Bronze → Silver → Gold + quality gates
 │   ├── build_report.py                        # interactive HTML dashboard (Plotly)
 │   ├── build_notebook.py                      # build + execute + export notebook HTML
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
+│   ├── audit_fairness.py                      # fleet fairness CLI (--check exits 1 on policy fail)
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
 │   └── serve.py                               # uvicorn entry point for the API
@@ -93,17 +94,19 @@ mri-quench-predictive-maintenance/
 │   ├── serving.py         # FastAPI: /predict with SHAP top-factors
 │   ├── monitoring.py      # Evidently PSI drift checks (retraining trigger)
 │   ├── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
-│   └── llmops.py          # token/cost ledger + LangSmith config + eval rows
+│   ├── llmops.py          # token/cost ledger + LangSmith config + eval rows
+│   └── fairness.py        # Fairlearn fleet audit (event recall + alert parity)
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 86 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops)
+├── tests/                 # 92 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
+│   ├── eu_ai_act.md       # AI Act obligation mapping + risk register
 │   └── model_card.md      # model card, attached to every MLflow run
 ├── Dockerfile             # serving image (FastAPI + CPU torch)
 ├── requirements.txt
@@ -121,7 +124,11 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 86 tests
+python -m pytest                          # 92 tests
+
+# governance: fleet fairness audit (Fairlearn, grouped by magnet)
+python scripts/audit_fairness.py          # -> reports/fairness.json (pass/warn/fail)
+python scripts/audit_fairness.py --check  # CI mode: exit 1 on policy failure
 
 # agent observability + evaluation (LLMOps)
 python scripts/eval_agent.py              # offline structural eval -> reports/agent_eval.json
@@ -224,6 +231,16 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
     the actual model/data, the HITL invariant, guardrail refusal — into
     `reports/agent_eval.json`, with optional RAGAS faithfulness scoring when an
     OpenAI key is available.
+12. **Fleet fairness as a release gate** — Fairlearn `MetricFrame` grouped by
+    `magnet_id`; safety equity requires **100 % event recall (≥ 72 h lead) on
+    every event-bearing magnet**, measured with the pipeline's own
+    `evaluate.match_events` so the audit can never disagree with the published
+    metrics; alert-burden parity uses demographic-parity **difference** among
+    alerting magnets (clean magnets that never page are not penalised) plus a
+    false-positive-rate spread check. `scripts/audit_fairness.py --check` is
+    CI-ready; results land in `metrics.json → fairness` and
+    `reports/fairness.json`. The AI Act mapping and risk register live in
+    [`docs/eu_ai_act.md`](docs/eu_ai_act.md).
 
 ---
 
@@ -261,6 +278,11 @@ Plus 11 LLMOps tests: cost arithmetic + price table, unknown-model flagging, led
 totals/persistence, usage scraping from AI messages, LangSmith env handling (incl.
 no os.environ mutation), transcript flattening for RAGAS rows, and the full offline
 eval harness (4/4 scenarios, incl. the ticket-without-approval filesystem invariant).
+Plus 8 fairness tests: MetricFrame contract (selection / TPR / FPR / count per
+magnet), hard failure when a magnet misses its events, clean magnets that never
+page not penalising parity, alert-burden disparity detection, PR-AUC skipping
+magnets without positives, report writing, and the real champion-LSTM audit
+(event recall 100 % on all four event-bearing magnets, verdict `pass`).
 
 ---
 

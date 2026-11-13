@@ -1,8 +1,8 @@
 # Model Card — QuenchGuard LSTM Quench Detector
 
-> Status: **stub** — sections marked _(Phase G)_ are completed during the
-> governance phase (full EU AI Act mapping, fleet fairness audit, HITL policy).
-> This card is versioned with the code and attached to every MLflow run.
+> Status: **complete** (v1.0). This card is versioned with the code and attached
+> to every MLflow run. The EU AI Act obligation mapping lives in
+> [`docs/eu_ai_act.md`](eu_ai_act.md).
 
 ## Model details
 
@@ -61,10 +61,62 @@ _Benchmark baselines (same features): HistGBDT PR-AUC 0.997, LogReg 0.975._
 * The maintenance agent (`scripts/agent_demo.py`) cites the same SHAP factors
   and this card's documentation (TF-IDF RAG) when it drafts tickets.
 
-## Fairness _(Phase G)_
+## Fairness
 
-Fleet-fairness audit across magnet sites/vendors/ages (Fairlearn MetricFrame)
-— to be filled.
+Audited with Fairlearn (`MetricFrame`) on the held-out test split, grouped by
+`magnet_id` (the only grouping available in this study; the harness accepts any
+column, so vendor / install year / site is a schema change, not a code change).
+Reproduce with `python scripts/audit_fairness.py`; machine-readable results in
+`reports/fairness.json`.
+
+| Check | Policy | Result | Verdict |
+|---|---|---|---|
+| Event recall ≥ 72 h, per event-bearing magnet | 100 % (4/4 events) | MRI-01/02/05/06 = 100 % | pass |
+| Selection-rate difference among alerting magnets | ≤ 0.20 | 0.126 | pass |
+| Selection-rate ratio among alerting magnets | ≤ 3.0 | 1.40 | pass |
+| False-positive-rate spread across the fleet | ≤ 0.10 | 0.066 | pass |
+| Per-magnet PR-AUC spread (informational) | ≤ 0.10 | 0.0013 | pass |
+
+**Overall: PASS.** Two magnets (MRI-03, MRI-04) have no test events and
+correctly never alert; a max/min ratio against zero is undefined, so parity is
+measured **among the four alerting magnets** rather than penalising clean units.
+Per-magnet event counts are tiny (one event each), which is why the safety
+policy requires *every* event to be detected instead of averaging recall.
+Known limitation: with 4 test events this audit can detect gross
+under-protection, not small per-group gaps — a production audit needs months of
+per-site data.
+
+## Human oversight
+
+Oversight is enforced by orchestration, not by prompt instructions:
+
+* The detector only **raises alerts**; it never dispatches technicians.
+* The LangGraph maintenance agent (`src/quenchguard/agent.py`) investigates and
+  **drafts** a service ticket, but `create_ticket` is wrapped in a LangGraph
+  `interrupt()`. The graph pauses, a human operator approves or rejects, and
+  only then is `reports/tickets/*.md` written. A rejection reason is fed back
+  to the model.
+* Tests assert both the interrupt and the filesystem invariant (no ticket file
+  exists before approval), and the offline eval harness
+  (`scripts/eval_agent.py`) re-checks it per release.
+* Operators see the probability, the frozen threshold and the top-3 SHAP
+  factors at the point of decision, so an alert is contestable.
+
+## Monitoring and lifecycle
+
+* **Drift:** Evidently PSI (alert > 0.2) between the training reference and the
+  current batch (`scripts/monitor.py`); a retraining recommendation fires when
+  any SHAP-key feature drifts or > 25 % of features drift. The current study
+  legitimately flags late-period pressure shift (PSI 1.56 on
+  `p_roll30_mean`) — see `reports/drift.json`.
+* **Performance:** PR-AUC, event recall and false-page rate are recomputed on
+  every pipeline run; the fairness audit is part of the pipeline
+  (`metrics.json → fairness`).
+* **Retraining:** monthly scheduled review **or** drift trigger. Candidates
+  must beat the champion on validation PR-AUC, stay inside the false-page
+  budget **and** pass the fairness audit before the `champion` alias moves.
+* **Rollback:** the previous registry version remains addressable; alias
+  promotion is reversible without redeploying code.
 
 ## Limitations
 

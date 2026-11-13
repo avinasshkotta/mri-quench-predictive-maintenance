@@ -1066,6 +1066,100 @@
       "t_std": 0.001404
     }
   },
+  "fairness": {
+    "threshold": 0.9,
+    "n_windows": 7699,
+    "n_magnets": 6,
+    "metrics": {
+      "overall": {
+        "selection_rate": 0.20872840628653072,
+        "true_positive_rate": 0.9993489583333334,
+        "false_positive_rate": 0.011682622099626805,
+        "count": 7699.0
+      },
+      "by_group": {
+        "MRI-01": {
+          "selection_rate": 0.4386694386694387,
+          "true_positive_rate": 1.0,
+          "false_positive_rate": 0.0657439446366782,
+          "count": 962.0
+        },
+        "MRI-02": {
+          "selection_rate": 0.35304659498207885,
+          "true_positive_rate": 1.0,
+          "false_positive_rate": 0.01366120218579235,
+          "count": 1116.0
+        },
+        "MRI-03": {
+          "selection_rate": 0.0,
+          "true_positive_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "count": 1681.0
+        },
+        "MRI-04": {
+          "selection_rate": 0.0,
+          "true_positive_rate": 0.0,
+          "false_positive_rate": 0.0,
+          "count": 1681.0
+        },
+        "MRI-05": {
+          "selection_rate": 0.31303006939090205,
+          "true_positive_rate": 0.9973958333333334,
+          "false_positive_rate": 0.025191675794085433,
+          "count": 1297.0
+        },
+        "MRI-06": {
+          "selection_rate": 0.4002079002079002,
+          "true_positive_rate": 1.0,
+          "false_positive_rate": 0.0017301038062283738,
+          "count": 962.0
+        }
+      }
+    },
+    "verdict": "pass",
+    "findings": [
+      "no fairness policy breach detected"
+    ],
+    "event_recall_by_magnet": {
+      "MRI-01": 1.0,
+      "MRI-02": 1.0,
+      "MRI-03": "None",
+      "MRI-04": "None",
+      "MRI-05": 1.0,
+      "MRI-06": 1.0
+    },
+    "window_recall_by_magnet": {
+      "MRI-01": 1.0,
+      "MRI-02": 1.0,
+      "MRI-03": "None",
+      "MRI-04": "None",
+      "MRI-05": 0.9973958333333334,
+      "MRI-06": 1.0
+    },
+    "n_alerting_magnets": 4,
+    "selection_rate_difference": 0.1256,
+    "selection_rate_ratio": 1.4014,
+    "max_selection_rate_difference": 0.2,
+    "max_selection_rate_ratio": 3.0,
+    "fpr_difference": 0.0657,
+    "max_fpr_difference": 0.1,
+    "event_recall_requirement": 1.0,
+    "pr_auc_by_magnet": {
+      "MRI-01": 1.0,
+      "MRI-02": 0.9998,
+      "MRI-03": "None",
+      "MRI-04": "None",
+      "MRI-05": 0.9987,
+      "MRI-06": 1.0
+    },
+    "pr_auc_spread": 0.0013,
+    "notes": [
+      "Sensitive feature: magnet_id (the only grouping in this study).",
+      "In production extend to vendor / install year / site \u2014 the audit takes any column.",
+      "Safety equity uses the pipeline's own event matching (evaluate.match_events: episode active inside the 96 h horizon, lead clamped to the horizon, detected_in_time requires >= 72 h), so the audit can never disagree with the published metrics.",
+      "Per-magnet recall is noisy with 4 test events; the policy therefore requires recall=1.0 per event-bearing magnet instead of averaging."
+    ]
+  },
   "training": {
     "best_val_pr_auc": 0.994698849081793,
     "epochs_run": 10

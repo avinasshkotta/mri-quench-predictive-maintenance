@@ -203,6 +203,14 @@ def main() -> int:
         current=labelled.loc[labelled.split == "test", FEATURE_COLUMNS],
     )
 
+    # 10 -- fleet fairness audit (Fairlearn, grouped by magnet) ------------------------
+    print("\n[fairness] Fairlearn fleet audit (event recall + alert-burden parity)")
+    from quenchguard.fairness import run_fairness_audit
+
+    fairness = run_fairness_audit(cfg=cfg, frame=test_frame,
+                                  threshold=thresholds["lstm"],
+                                  events=test_events)
+
     payload = {
         "config": {
             "sequence_length": cfg.window.seq_len,
@@ -221,6 +229,7 @@ def main() -> int:
         "importance": imp.head(15).to_dict(orient="records"),
         "shap": shap_info,
         "drift": drift,
+        "fairness": fairness,
         "training": {"best_val_pr_auc": float(max(h["val_ap"] for h in history)),
                      "epochs_run": len(history)},
     }

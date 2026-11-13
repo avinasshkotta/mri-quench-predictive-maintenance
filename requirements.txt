@@ -32,6 +32,9 @@ mlflow>=3.0
 # Drift monitoring (Evidently PSI, scripts/monitor.py)
 evidently>=0.7
 
+# Governance: fleet fairness audit (Fairlearn MetricFrame, scripts/audit_fairness.py)
+fairlearn>=0.15
+
 # Agentic layer (LangGraph tool loop + OpenAI, scripts/agent_demo.py)
 langgraph>=1.2
 langchain-openai>=1.0          # OpenAI Chat models (needs OPENAI_API_KEY)
