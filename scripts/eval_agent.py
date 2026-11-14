@@ -78,9 +78,10 @@ def _run_ragas() -> int:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            from langchain_openai import ChatOpenAI
+            from langchain_openai import (ChatOpenAI, OpenAIEmbeddings)
             from ragas import evaluate
-            from ragas.llms import LangchainLLMWrapper
+            from ragas.embeddings import LangchainEmbeddingsWrapper
+            from ragas.llms import llm_factory
             from ragas.metrics import answer_relevancy, faithfulness
     except ImportError as exc:
         print(f"ragas unavailable ({exc}) — pip install ragas", file=sys.stderr)
@@ -115,12 +116,27 @@ def _run_ragas() -> int:
 
     ds = Dataset.from_list([{**r, "contexts": [r["contexts"]], "ground_truth": ""}
                             for r in rows])
-    judge = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o-mini", temperature=0))
-    scores = evaluate(ds, metrics=[faithfulness, answer_relevancy], llm=judge)
+    from openai import OpenAI
+
+    judge = llm_factory("gpt-4o-mini", client=OpenAI())
+    # answer_relevancy needs embeddings with embed_query; ragas 0.4's own
+    # provider class only has embed_texts, so wrap a LangChain embedder.
+    embeddings = LangchainEmbeddingsWrapper(
+        OpenAIEmbeddings(model="text-embedding-3-small"))
+    scores = evaluate(ds, metrics=[faithfulness, answer_relevancy],
+                      llm=judge, embeddings=embeddings)
+
+    # ragas >=0.4 returns an EvaluationResult (no .items()); aggregate the
+    # numeric metric columns from its DataFrame view.
+    import pandas as pd
+
+    frame = scores.to_pandas()
+    means = frame.select_dtypes("number").mean()
+    summary = {k: (None if pd.isna(v) else round(float(v), 4))
+               for k, v in means.items()}
     (REPORTS_DIR / "ragas_scores.json").write_text(
-        json.dumps({k: float(v) for k, v in scores.items()}, indent=2),
-        encoding="utf-8")
-    print("ragas:", {k: round(float(v), 3) for k, v in scores.items()})
+        json.dumps(summary, indent=2), encoding="utf-8")
+    print("ragas:", summary)
     return 0
 
 

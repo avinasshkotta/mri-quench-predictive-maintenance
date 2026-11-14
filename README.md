@@ -76,6 +76,7 @@ mri-quench-predictive-maintenance/
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
 │   ├── audit_fairness.py                      # fleet fairness CLI (--check exits 1 on policy fail)
 │   ├── validate_cmapss.py                     # NASA C-MAPSS external validation (--download)
+│   ├── demo_app.py                            # Streamlit interactive demo (4 tabs)
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
 │   └── serve.py                               # uvicorn entry point for the API
@@ -105,7 +106,7 @@ mri-quench-predictive-maintenance/
 │   ├── external/cmapss/   # NASA FD001 files (downloaded on demand, git-ignored)
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 108 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
+├── tests/                 # 110 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -128,10 +129,13 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 108 tests
+python -m pytest                          # 110 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
+
+# interactive browser demo (4 tabs: fleet, drilldown, agent chat + HITL, governance)
+streamlit run scripts/demo_app.py
 
 # governance: fleet fairness audit (Fairlearn, grouped by magnet)
 python scripts/audit_fairness.py          # -> reports/fairness.json (pass/warn/fail)
@@ -308,6 +312,9 @@ excluded from the feature set, episode collapsing that never leaks across engine
 horizon clamping, censored-engine false-alert accounting, the 25/16 censoring
 denominators, an end-to-end run on synthetic C-MAPSS-shaped files, split validation,
 and — when the NASA files are present — the real FD001 shapes and headline result.
+Plus 2 demo-app tests (Streamlit `AppTest`): the four-tab UI renders fleet metrics
+and governance reports without exception, and a missing OpenAI key produces the
+friendly warning instead of a crash.
 
 ---
 
