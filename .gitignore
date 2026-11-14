@@ -37,6 +37,10 @@ data/external/cmapss/*
 # ---- Trained artifacts ----
 models/*
 !models/.gitkeep
+# serving triple committed (~0.6 MB) so the cloud demo loads the real champion
+!models/lstm_detector.pt
+!models/scaler.joblib
+!models/hist_gbdt.joblib
 
 # ---- MLflow experiment store (SQLite metadata + artifact dir, git-ignored) ----
 mlflow.db

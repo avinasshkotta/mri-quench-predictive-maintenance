@@ -77,6 +77,7 @@ mri-quench-predictive-maintenance/
 │   ├── audit_fairness.py                      # fleet fairness CLI (--check exits 1 on policy fail)
 │   ├── validate_cmapss.py                     # NASA C-MAPSS external validation (--download)
 │   ├── demo_app.py                            # Streamlit interactive demo (4 tabs)
+│   ├── build_demo_bundle.py                   # committed data/demo fallback for cloud demos
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
 │   └── serve.py                               # uvicorn entry point for the API
@@ -103,10 +104,11 @@ mri-quench-predictive-maintenance/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
 │   ├── silver/            # SILVER  : cleaned, deduplicated, range-checked tables
 │   ├── gold/              # GOLD    : model-ready feature frame
+│   ├── demo/              # committed ~0.6 MB fallback for cloud demos (see README inside)
 │   ├── external/cmapss/   # NASA FD001 files (downloaded on demand, git-ignored)
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
-├── models/                # LSTM + scaler + HistGBDT (serving artifacts, git-ignored)
-├── tests/                 # 110 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
+├── models/                # LSTM + scaler + HistGBDT serving triple (committed, ~0.6 MB)
+├── tests/                 # 114 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -129,13 +131,15 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 110 tests
+python -m pytest                          # 114 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
 
 # interactive browser demo (4 tabs: fleet, drilldown, agent chat + HITL, governance)
 streamlit run scripts/demo_app.py
+# needs models/ artifacts: python scripts/run_pipeline.py (local)
+#   or python scripts/build_demo_bundle.py + committed models/ (cloud)
 
 # governance: fleet fairness audit (Fairlearn, grouped by magnet)
 python scripts/audit_fairness.py          # -> reports/fairness.json (pass/warn/fail)
@@ -189,6 +193,24 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
 > **Windows + NVIDIA note:** `TrainConfig.disable_cudnn = True` makes the CUDA LSTM use
 > the native backend; some driver/torch combinations crash at process teardown when a
 > cuDNN-trained LSTM is destroyed. Set it to `False` if your stack shuts down cleanly.
+
+## Run the demo in the cloud (Streamlit Community Cloud)
+
+The serving triple (`models/`, ~0.6 MB) and a slim data fallback
+(`data/demo/`, built by `scripts/build_demo_bundle.py`) are **committed**, so
+the public demo serves the real champion model with no GPU and no secrets in
+git:
+
+1. Sign in at <https://share.streamlit.io> with your GitHub account.
+2. **New app** → pick this repo, branch `main`, main file `scripts/demo_app.py`.
+3. **Advanced settings → Secrets**, paste one line:
+   `OPENAI_API_KEY = "sk-..."` (the app reads `st.secrets`; LangSmith is
+   optional: `LANGCHAIN_API_KEY = "..."`).
+4. Deploy. Fleet / drilldown / agent-chat work immediately; the governance
+   tab reads the committed `reports/*.json`.
+
+Local runs keep the full medallion data: `agent.data_file()` / `_gold()`
+prefer `data/silver|gold` and only fall back to the committed bundle.
 
 ---
 
@@ -292,9 +314,10 @@ Plus 9 drift tests: PSI flags a shifted synthetic feature and stays quiet on sta
 ones, retraining verdicts (key-feature drift, fleet-wide share, all-stable), bad-input
 rejection, `metrics.json` key-feature extraction, report writing, and (when gold data
 exists) the real train-vs-test check.
-Plus 13 agent tests: TF-IDF RAG ranking, tool-loop round-trip, system-prompt gating,
+Plus 15 agent tests: TF-IDF RAG ranking, tool-loop round-trip, system-prompt gating,
 scripted guardrail refusal, HITL interrupt → approval writes the ticket while
-rejection blocks it, thread isolation (checkpointing), ticket markdown format, and
+rejection blocks it, thread isolation (checkpointing), ticket markdown format,
+demo-bundle fallback (`data/demo/` is read when silver/gold are absent), and
 real-model tool calls (skip when artifacts are absent).
 Plus 12 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
 totals/persistence, usage scraping from AI messages, LangSmith env handling (incl.

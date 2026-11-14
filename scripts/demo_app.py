@@ -42,9 +42,7 @@ try:                                         # Streamlit Cloud secrets
 except Exception:
     pass
 
-SILVER = REPO_ROOT / "data" / "silver"
 REPORTS = REPO_ROOT / "reports"
-
 
 # --------------------------------------------------------------------------------------
 # cached loaders (the same production code paths the API and agent use)
@@ -72,13 +70,15 @@ def _score(magnet: str) -> dict[str, Any]:
 
 @st.cache_data(show_spinner="Reading silver telemetry…")
 def _sensor_series(magnet: str, hours: int = 72) -> pd.DataFrame:
+    from quenchguard.agent import data_file
+
     specs = (("pressure.parquet", "timestamp", "pressure_mpa", "helium_pressure_mpa"),
              ("cold_head.parquet", "timestamp", "cold_head_k", "cold_head_k"),
              ("vibration.parquet", "window_end", "rms_g", "vibration_rms_g"))
     out = pd.DataFrame()
     for fname, ts, val, label in specs:
-        path = SILVER / fname
-        if not path.exists():
+        path = data_file(fname)
+        if path is None:
             continue
         df = pd.read_parquet(path)
         df = df[df.magnet_id == magnet].sort_values(ts)
@@ -167,7 +167,8 @@ with tab_drill:
         if not series.empty:
             st.line_chart(series)
         else:
-            st.caption("silver layer not found — run the pipeline to generate it")
+            st.caption("no telemetry found — run the pipeline or "
+                       "`scripts/build_demo_bundle.py`")
 
 
 # ---- tab 3: agent ---------------------------------------------------------------------

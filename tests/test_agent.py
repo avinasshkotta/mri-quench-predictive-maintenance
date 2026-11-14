@@ -10,6 +10,7 @@ import json
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from langchain_core.messages import AIMessage
 
@@ -195,3 +196,49 @@ def test_sensor_summary_real():
         pytest.skip("silver data not built")
     assert "helium_pressure" in out and out["helium_pressure"]["n_readings"] > 0
     assert out["helium_pressure"]["min"] <= out["helium_pressure"]["max"]
+
+
+# --------------------------------------------------------------------------------------
+# demo-bundle fallback (cloud demo serves data/demo when silver/gold are absent)
+# --------------------------------------------------------------------------------------
+def test_gold_falls_back_to_demo_bundle(monkeypatch, tmp_path):
+    import quenchguard.agent as agent_mod
+
+    demo = tmp_path / "data" / "demo"
+    demo.mkdir(parents=True)
+    pd.DataFrame({"magnet_id": ["MRI-01"],
+                  "window_end": [pd.Timestamp("2026-01-01")],
+                  "p_mean": [2.4]}).to_parquet(demo / "features.parquet",
+                                               index=False)
+    monkeypatch.setattr(agent_mod, "REPO_ROOT", tmp_path)
+    frame = agent_mod._gold()
+    assert len(frame) == 1
+    assert agent_mod.data_file("pressure.parquet") is None
+
+
+def test_data_file_prefers_real_silver_over_bundle():
+    import quenchguard.agent as agent_mod
+
+    got = agent_mod.data_file("pressure.parquet")
+    if (agent_mod.REPO_ROOT / "data" / "silver" / "pressure.parquet").exists():
+        assert got is not None and "silver" in str(got)
+    elif (agent_mod.REPO_ROOT / "data" / "demo" / "pressure.parquet").exists():
+        assert got is not None and "demo" in str(got)
+    else:
+        assert got is None
+
+
+def test_sensor_summary_works_from_bundle_only(monkeypatch, tmp_path):
+    import quenchguard.agent as agent_mod
+
+    demo = tmp_path / "data" / "demo"
+    demo.mkdir(parents=True)
+    hours = pd.date_range("2026-01-01", periods=48, freq="1h")
+    pd.DataFrame({"timestamp": hours, "magnet_id": "MRI-01",
+                  "pressure_mpa": [2.4 + 0.01 * i for i in range(48)]}).to_parquet(
+        demo / "pressure.parquet", index=False)
+    monkeypatch.setattr(agent_mod, "REPO_ROOT", tmp_path)
+    out = json.loads(agent_mod.sensor_summary("MRI-01", hours=24))
+    assert out["magnet_id"] == "MRI-01"
+    # the summary window is inclusive at both ends: 25 hourly points
+    assert out["helium_pressure"]["n_readings"] == 25

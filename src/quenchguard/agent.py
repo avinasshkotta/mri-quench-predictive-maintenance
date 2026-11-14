@@ -122,11 +122,28 @@ def _artifacts():
     return _artifacts_cache
 
 
+def data_file(fname: str) -> Path | None:
+    """Locate a data file: real silver layer first, then the demo bundle.
+
+    The committed bundle (``data/demo/``, built by
+    ``scripts/build_demo_bundle.py``) lets the public cloud demo serve real
+    model + telemetry paths without the git-ignored medallion data.
+    """
+    for base in ("silver", "demo"):
+        path = REPO_ROOT / "data" / base / fname
+        if path.exists():
+            return path
+    return None
+
+
 def _gold() -> pd.DataFrame:
-    path = REPO_ROOT / "data" / "gold" / "features.parquet"
-    if not path.exists():
-        raise FileNotFoundError("gold features missing — run scripts/run_pipeline.py")
-    return pd.read_parquet(path)
+    for path in (REPO_ROOT / "data" / "gold" / "features.parquet",
+                 REPO_ROOT / "data" / "demo" / "features.parquet"):
+        if path.exists():
+            return pd.read_parquet(path)
+    raise FileNotFoundError(
+        "gold features missing — run scripts/run_pipeline.py "
+        "(or scripts/build_demo_bundle.py for the cloud demo)")
 
 
 def fleet_risk() -> str:
@@ -163,13 +180,12 @@ def score_magnet(magnet_id: str) -> str:
 
 def sensor_summary(magnet_id: str, hours: float = 24.0) -> str:
     """Recent telemetry statistics for one magnet from the silver layer."""
-    silver = REPO_ROOT / "data" / "silver"
     out: dict[str, Any] = {"magnet_id": magnet_id, "window_hours": hours}
     specs = [("pressure.parquet", "timestamp", "pressure_mpa", "helium_pressure"),
              ("cold_head.parquet", "timestamp", "cold_head_k", "cold_head_k")]
     for fname, ts_col, val_col, key in specs:
-        path = silver / fname
-        if not path.exists():
+        path = data_file(fname)
+        if path is None:
             continue
         df = pd.read_parquet(path)
         df = df[df.magnet_id == magnet_id].sort_values(ts_col)
@@ -181,8 +197,8 @@ def sensor_summary(magnet_id: str, hours: float = 24.0) -> str:
                         "mean": round(float(recent.mean()), 4),
                         "last": round(float(df[val_col].iloc[-1]), 4),
                         "n_readings": int(len(recent))}
-    vib_path = silver / "vibration.parquet"
-    if vib_path.exists():
+    vib_path = data_file("vibration.parquet")
+    if vib_path is not None:
         df = pd.read_parquet(vib_path)
         df = df[df.magnet_id == magnet_id].sort_values("window_end")
         cut = df["window_end"].max() - pd.Timedelta(hours=hours)
