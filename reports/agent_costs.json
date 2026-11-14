@@ -1,15 +1,13 @@
 {
   "n_calls": 2,
   "prompt_tokens": 1086,
-  "completion_tokens": 62,
-  "cost_usd": 0.0,
+  "completion_tokens": 68,
+  "cost_usd": 0.000204,
   "by_model": {
     "gpt-4o-mini-2024-07-18": {
       "n_calls": 2,
-      "cost_usd": 0.0
+      "cost_usd": 0.000204
     }
   },
-  "unpriced_models": [
-    "gpt-4o-mini-2024-07-18"
-  ]
+  "unpriced_models": []
 }

@@ -12,8 +12,8 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from quenchguard.llmops import (PRICE_TABLE, TokenLedger, configure_tracing,
-                                estimate_cost, load_env,
+from quenchguard.llmops import (PRICE_TABLE, TokenLedger, canonical_model,
+                                configure_tracing, estimate_cost, load_env,
                                 transcript_to_eval_rows)
 
 
@@ -28,6 +28,17 @@ def test_estimate_cost_uses_price_table():
 
 def test_estimate_cost_zero_for_unknown_model():
     assert estimate_cost("totally-made-up", 1000, 1000) == 0.0
+
+
+def test_dated_snapshot_models_still_price():
+    """OpenAI reports dated snapshots; the ledger prices by model family."""
+    assert canonical_model("gpt-4o-mini-2024-07-18") == "gpt-4o-mini"
+    assert canonical_model("gpt-4o-mini") == "gpt-4o-mini"
+    ledger = TokenLedger()
+    ledger.record("gpt-4o-mini-2024-07-18", 1000, 500)
+    totals = ledger.totals
+    assert totals["unpriced_models"] == []
+    assert totals["cost_usd"] > 0.0
 
 
 def test_ledger_totals_and_save(tmp_path):

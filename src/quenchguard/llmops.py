@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,17 @@ PRICE_TABLE: dict[str, tuple[float, float]] = {
     "gpt-4.1-mini": (0.400, 1.600),
 }
 DEFAULT_MODEL = "gpt-4o-mini"
+
+_DATED_SNAPSHOT = re.compile(r"-\d{4}-\d{2}-\d{2}$")
+
+
+def canonical_model(model: str) -> str:
+    """Strip a dated snapshot suffix: gpt-4o-mini-2024-07-18 -> gpt-4o-mini.
+
+    OpenAI's response metadata reports the dated snapshot; the price table
+    is keyed by model family.
+    """
+    return _DATED_SNAPSHOT.sub("", model or "")
 
 
 def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
@@ -46,13 +58,14 @@ class TokenLedger:
 
     def record(self, model: str, prompt_tokens: int, completion_tokens: int,
                scenario: str = "") -> float:
-        cost = estimate_cost(model, prompt_tokens, completion_tokens)
+        canonical = canonical_model(model)
+        cost = estimate_cost(canonical, prompt_tokens, completion_tokens)
         self.calls.append({
             "model": model, "scenario": scenario,
             "prompt_tokens": int(prompt_tokens),
             "completion_tokens": int(completion_tokens),
             "cost_usd": round(cost, 6),
-            "priced": model in PRICE_TABLE,
+            "priced": canonical in PRICE_TABLE,
         })
         return cost
 
@@ -171,4 +184,4 @@ def _row(question: str, answer: str, evidence: list[str]) -> dict[str, str]:
 
 
 __all__ = ["TokenLedger", "estimate_cost", "configure_tracing", "load_env",
-           "transcript_to_eval_rows", "PRICE_TABLE"]
+           "canonical_model", "transcript_to_eval_rows", "PRICE_TABLE"]
