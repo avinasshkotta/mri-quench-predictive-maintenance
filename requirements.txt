@@ -1,7 +1,11 @@
 # Core scientific stack
 numpy>=1.26
-pandas>=2.1
-scikit-learn>=1.4
+# <3.0: evidently 0.7 imports pandas.core.dtypes.common.infer_dtype_from_object,
+# which pandas 3.0 removed
+pandas>=2.1,<3.0
+# <1.8: the committed serving artifacts (models/hist_gbdt.joblib) were pickled
+# with 1.7.x; sklearn _loss classes break joblib.load across minor versions
+scikit-learn>=1.7,<1.8
 scipy>=1.11
 matplotlib>=3.8
 seaborn>=0.13
@@ -30,10 +34,11 @@ shap>=0.45
 mlflow>=3.0
 
 # Drift monitoring (Evidently PSI, scripts/monitor.py)
-evidently>=0.7
+evidently>=0.7,<0.8
 
 # Governance: fleet fairness audit (Fairlearn MetricFrame, scripts/audit_fairness.py)
-fairlearn>=0.15
+# >=0.14 (not >=0.15): 0.15 is not on PyPI yet; local 0.15.0 is a pre-release
+fairlearn>=0.14,<0.16
 
 # Agentic layer (LangGraph tool loop + OpenAI, scripts/agent_demo.py)
 langgraph>=1.2
