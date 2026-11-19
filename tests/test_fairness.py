@@ -151,3 +151,23 @@ def test_run_fairness_audit_real_model():
     # safety equity: every test event must be detected, per magnet
     recalls = [v for v in audit["event_recall_by_magnet"].values() if v is not None]
     assert recalls and min(recalls) >= EVENT_RECALL_REQUIREMENT
+
+
+def test_verdict_reports_fairlearn_parity_metrics():
+    """Week 7 Lab 4 contract: DPD and EOD via Fairlearn, JSON-safe."""
+    frame = _frame()
+    by_group = group_metrics(frame, 0.8)["by_group"]
+    verdict = audit_verdict(by_group, frame, 0.8)
+    assert "demographic_parity_difference" in verdict
+    assert "equalized_odds_difference" in verdict
+    assert "parity_scope_note" in verdict
+    for key in ("demographic_parity_difference", "equalized_odds_difference"):
+        value = verdict[key]
+        assert value is None or isinstance(value, float)
+        if value is not None:
+            assert 0.0 <= value <= 1.0
+    # DPD spans all magnets, so it must be at least as large as the
+    # alerting-only selection-rate difference in this synthetic frame.
+    if verdict["demographic_parity_difference"] is not None:
+        assert verdict["demographic_parity_difference"] >= \
+            verdict["selection_rate_difference"] - 1e-9

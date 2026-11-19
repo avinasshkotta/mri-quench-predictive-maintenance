@@ -140,14 +140,13 @@ def main() -> int:
               "or put OPENAI_API_KEY=sk-... in the repo's .env file")
         return 2
 
-    from langchain_openai import ChatOpenAI
-
     from quenchguard.agent import build_graph
+    from quenchguard.llmops import build_chat_model
 
     tracing = configure_tracing()
     if tracing:
         print("LangSmith tracing enabled (LANGCHAIN_PROJECT=quenchguard)")
-    llm = ChatOpenAI(model=args.model, temperature=0)
+    llm = build_chat_model(model=args.model)
     graph = build_graph(llm)
     print(f"QuenchGuard agent ready (model={args.model}, tools bound, "
           f"HITL ticket gate armed)")

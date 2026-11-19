@@ -57,7 +57,10 @@ def _window(seed: int = 1) -> list[list[float]]:
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "model_loaded": True}
+    body = r.json()
+    assert body["status"] == "ok" and body["model_loaded"] is True
+    assert body["model_source"] == "local"
+    assert body["model_version"] is None
 
 
 def test_model_info_shapes(client):
@@ -167,3 +170,78 @@ def test_artifacts_load_from_disk(tmp_path):
     assert 0.0 <= out["quench_probability"] <= 1.0
     assert out["alert"] == (out["quench_probability"] >= 0.7)
     assert torch.__version__  # torch import exercised
+
+
+# --------------------------------------------------------------------------------------
+# Week 7 deployment patterns: threshold env override, Art. 12 audit log, registry source
+# --------------------------------------------------------------------------------------
+def test_threshold_env_override(monkeypatch):
+    from quenchguard.serving import _resolve_threshold
+
+    monkeypatch.delenv("PREDICTION_THRESHOLD", raising=False)
+    assert _resolve_threshold(0.383) == 0.383
+    monkeypatch.setenv("PREDICTION_THRESHOLD", "0.25")
+    assert _resolve_threshold(0.383) == 0.25
+    monkeypatch.setenv("PREDICTION_THRESHOLD", "not-a-number")
+    assert _resolve_threshold(0.383) == 0.383          # bad env never breaks serving
+
+
+def test_predict_writes_art12_audit_log(client, tmp_path, monkeypatch):
+    """EU AI Act Art. 12: one JSONL record per scored window."""
+    import json
+
+    log_path = tmp_path / "prediction_log.jsonl"
+    monkeypatch.setenv("PREDICTION_LOG_PATH", str(log_path))
+    monkeypatch.delenv("PREDICTION_LOG", raising=False)
+
+    r = client.post("/predict", json={"magnet_id": "M9", "window": _window(2)})
+    assert r.status_code == 200
+    lines = log_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert {"ts", "magnet_id", "input_sha256", "quench_probability", "alert",
+            "threshold", "top_factors", "model_name", "model_source"} <= set(record)
+    assert record["magnet_id"] == "M9"
+    assert record["input_sha256"] and len(record["input_sha256"]) == 64
+    assert len(record["top_factors"]) == 3
+
+
+def test_prediction_log_can_be_disabled(client, tmp_path, monkeypatch):
+    log_path = tmp_path / "x.jsonl"
+    monkeypatch.setenv("PREDICTION_LOG_PATH", str(log_path))
+    monkeypatch.setenv("PREDICTION_LOG", "off")
+    client.post("/predict", json={"magnet_id": "M1", "window": _window(3)})
+    assert not log_path.exists()
+
+
+def test_registry_source_falls_back_to_local(monkeypatch):
+    """MODEL_SOURCE=registry must degrade to local models/, never crash."""
+    from quenchguard import serving as S
+    from quenchguard.config import MODELS_DIR
+
+    if not (MODELS_DIR / "lstm_detector.pt").exists():
+        pytest.skip("trained artifacts not built")
+
+    def boom(alias: str = "champion"):
+        raise RuntimeError("registry unreachable")
+
+    monkeypatch.setattr(S, "_registry_triple", boom)
+    art = S.Artifacts.load(source="registry")
+    assert art.source == "local"
+    assert art.fallback_reason and "registry unreachable" in art.fallback_reason
+    assert 0.0 <= art.threshold <= 1.0
+
+
+def test_explicit_local_source_skips_registry(monkeypatch):
+    from quenchguard import serving as S
+    from quenchguard.config import MODELS_DIR
+
+    if not (MODELS_DIR / "lstm_detector.pt").exists():
+        pytest.skip("trained artifacts not built")
+
+    def boom(alias: str = "champion"):
+        raise AssertionError("registry must not be touched for local source")
+
+    monkeypatch.setattr(S, "_registry_triple", boom)
+    art = S.Artifacts.load(source="local")
+    assert art.source == "local" and art.fallback_reason is None

@@ -1,11 +1,17 @@
 #!/usr/bin/env python
-"""Serve the QuenchGuard API.
+"""Serve QuenchGuard: the customer web API + UI and the model API.
 
     python scripts/serve.py                 # http://127.0.0.1:8000
     python scripts/serve.py --port 9000 --reload
 
-Docs at /docs (Swagger UI). Requires trained artifacts in ``models/``
-(run ``python scripts/run_pipeline.py`` first).
+The app (``quenchguard.webui:app``) serves:
+
+* ``/``            — the Next.js customer UI (when ``frontend/out`` exists)
+* ``/api/*``       — streaming agent chat (SSE), fleet/magnet panels
+* ``/predict``     — raw model scoring with SHAP factors (JSON API)
+
+Requires trained artifacts in ``models/`` (``python scripts/run_pipeline.py``)
+and ``OPENAI_API_KEY`` in the environment or repo ``.env`` for the chat.
 """
 
 from __future__ import annotations
@@ -27,7 +33,7 @@ def main() -> int:
 
     import uvicorn
 
-    uvicorn.run("quenchguard.serving:app", host=args.host, port=args.port,
+    uvicorn.run("quenchguard.webui:app", host=args.host, port=args.port,
                 reload=args.reload)
     return 0
 

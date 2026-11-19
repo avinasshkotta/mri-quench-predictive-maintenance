@@ -27,7 +27,7 @@ import mlflow
 import mlflow.pytorch
 from mlflow.tracking import MlflowClient
 
-from .config import Config, REPO_ROOT, REPORTS_DIR, default_config
+from .config import Config, MODELS_DIR, REPO_ROOT, REPORTS_DIR, default_config
 
 # SQLite backend: MLflow 3.x put the plain filesystem store into maintenance
 # mode, so experiment + registry metadata live in a small database file.
@@ -116,6 +116,12 @@ def log_run(cfg: Config | None = None, report: dict[str, Any] | None = None,
             card = REPO_ROOT / "docs" / "model_card.md"
             if card.exists():
                 mlflow.log_artifact(str(card))
+
+            # ---- serving triple: registry-backed serving reads these ------------
+            serving_files = ("lstm_detector.pt", "scaler.joblib", "hist_gbdt.joblib")
+            if all((MODELS_DIR / name).exists() for name in serving_files):
+                for name in serving_files:
+                    mlflow.log_artifact(str(MODELS_DIR / name), artifact_path="serving")
 
             # ---- model: log + register with the champion alias -------------------
             model_uri, version = None, None

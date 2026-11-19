@@ -76,6 +76,18 @@ def _clean(obj: Any) -> Any:
     return obj
 
 
+def _round_or_none(value: float | None, digits: int = 4) -> float | None:
+    """Round a metric, mapping NaN/undefined to None (JSON-safe)."""
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+        return round(float(value), digits)
+    except (TypeError, ValueError):
+        return None
+
+
 def per_magnet_pr_auc(frame: pd.DataFrame) -> dict[str, float | None]:
     """AP per magnet; None where a magnet has no positive windows."""
     from sklearn.metrics import average_precision_score
@@ -147,6 +159,29 @@ def audit_verdict(by_group: dict[str, dict], frame: pd.DataFrame,
                         f"{MAX_SELECTION_RATE_RATIO:g} — alert burden uneven")
         severity = "fail" if severity == "fail" else "warn"
 
+    # (b2) Fairlearn's named fairness measures (Week 7 Lab 4 contract).
+    # These are computed over ALL magnets (clean ones included), unlike the
+    # alerting-only policy in (b); both are reported for the audit trail.
+    # ``equalized_odds_difference`` is undefined for magnets without both
+    # classes — Fairlearn ignores NaN groups, and a NaN result is stored None.
+    dpd: float | None = None
+    eod: float | None = None
+    try:
+        from fairlearn.metrics import (demographic_parity_difference,
+                                       equalized_odds_difference)
+
+        y_true = frame["y"].to_numpy(int)
+        y_pred = (frame["score"].to_numpy(float) >= threshold).astype(int)
+        groups = frame["magnet_id"].to_numpy()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            dpd = float(demographic_parity_difference(
+                y_true, y_pred, sensitive_features=groups))
+            eod = float(equalized_odds_difference(
+                y_true, y_pred, sensitive_features=groups))
+    except Exception as exc:                          # noqa: BLE001
+        findings.append(f"fairlearn parity metrics unavailable ({type(exc).__name__})")
+
     # (c) false-page burden — FPR spread across the whole fleet (zeros count)
     fprs = {m: v["false_positive_rate"] for m, v in by_group.items()
             if v.get("false_positive_rate") is not None}
@@ -174,6 +209,10 @@ def audit_verdict(by_group: dict[str, dict], frame: pd.DataFrame,
         "selection_rate_ratio": round(ratio, 4),
         "max_selection_rate_difference": MAX_SELECTION_RATE_DIFFERENCE,
         "max_selection_rate_ratio": MAX_SELECTION_RATE_RATIO,
+        "demographic_parity_difference": _round_or_none(dpd),
+        "equalized_odds_difference": _round_or_none(eod),
+        "parity_scope_note": ("Fairlearn DPD/EOD span all magnets; "
+                              "selection_rate_* above span alerting magnets only"),
         "fpr_difference": round(fpr_diff, 4),
         "max_fpr_difference": MAX_FPR_DIFFERENCE,
         "event_recall_requirement": EVENT_RECALL_REQUIREMENT,

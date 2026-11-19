@@ -71,6 +71,9 @@ jobs:
           done
           test -s /tmp/model-info.json
           curl -sf http://127.0.0.1:8000/health
+          # the customer UI static export is served at /
+          curl -sf http://127.0.0.1:8000/ -o /tmp/index.html
+          grep -qi quenchguard /tmp/index.html
           python - <<'PY'
           import json, urllib.request
           import numpy as np
@@ -97,6 +100,31 @@ jobs:
             reports/training_history.csv
             reports/quenchguard_report.html
           if-no-files-found: error
+
+  frontend:
+    name: frontend build (Next.js static export)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build static export
+        working-directory: frontend
+        run: npm run build
+
+      - name: Static export exists
+        run: |
+          test -f frontend/out/index.html
+          test -f frontend/out/_next/static/js || true
 
   notebook:
     name: notebook executes + HTML export

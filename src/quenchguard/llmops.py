@@ -30,6 +30,34 @@ PRICE_TABLE: dict[str, tuple[float, float]] = {
 }
 DEFAULT_MODEL = "gpt-4o-mini"
 
+# Per-call output ceiling (LLMOps cost control): a runaway prompt cannot
+# explode completion cost. Override with LLM_MAX_TOKENS.
+DEFAULT_MAX_TOKENS = int(os.environ.get("LLM_MAX_TOKENS", "1024"))
+
+
+def build_chat_model(model: str | None = None, *, temperature: float = 0.0,
+                     streaming: bool = False, max_retries: int = 3,
+                     timeout: float = 60.0,
+                     max_tokens: int | None = None) -> Any:
+    """Production-grade ChatOpenAI factory: retries, timeout, token ceiling.
+
+    ``max_retries`` makes the OpenAI SDK retry 408/409/429/5xx with
+    exponential backoff (429s are routine at scale, not exceptional);
+    ``timeout`` bounds every call; ``max_tokens`` caps completion output so a
+    misconfigured prompt cannot multiply API cost. See the Week 7 LLMOps
+    cost-control checklist.
+    """
+    from langchain_openai import ChatOpenAI
+
+    return ChatOpenAI(
+        model=model or os.environ.get("QUENCHGUARD_LLM_MODEL", DEFAULT_MODEL),
+        temperature=temperature,
+        streaming=streaming,
+        max_retries=max_retries,
+        timeout=timeout,
+        max_tokens=DEFAULT_MAX_TOKENS if max_tokens is None else max_tokens,
+    )
+
 _DATED_SNAPSHOT = re.compile(r"-\d{4}-\d{2}-\d{2}$")
 
 
@@ -184,4 +212,5 @@ def _row(question: str, answer: str, evidence: list[str]) -> dict[str, str]:
 
 
 __all__ = ["TokenLedger", "estimate_cost", "configure_tracing", "load_env",
+           "build_chat_model", "DEFAULT_MAX_TOKENS",
            "canonical_model", "transcript_to_eval_rows", "PRICE_TABLE"]

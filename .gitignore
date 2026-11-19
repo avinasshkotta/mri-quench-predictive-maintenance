@@ -47,6 +47,9 @@ mlflow.db
 mlruns/
 mlartifacts/
 
+# ---- Runtime audit artifacts (EU AI Act Art. 12 prediction log) ----
+reports/prediction_log.jsonl
+
 # ---- Agent-generated tickets (runtime artifacts) ----
 reports/tickets/
 reports/ticket_approved/
@@ -55,6 +58,13 @@ reports/ticket_rejected/
 # ---- Local env ----
 .env
 *.log
+
+# ---- Frontend (Next.js) ----
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+frontend/next-env.d.ts
 
 # ---- OS / editor ----
 Thumbs.db

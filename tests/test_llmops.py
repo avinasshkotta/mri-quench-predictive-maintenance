@@ -12,8 +12,9 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from quenchguard.llmops import (PRICE_TABLE, TokenLedger, canonical_model,
-                                configure_tracing, estimate_cost, load_env,
+from quenchguard.llmops import (PRICE_TABLE, TokenLedger, build_chat_model,
+                                canonical_model, configure_tracing,
+                                estimate_cost, load_env,
                                 transcript_to_eval_rows)
 
 
@@ -153,3 +154,22 @@ def test_eval_ticket_scenario_never_writes_without_approval(tmp_path):
     assert result["checks"]["hitl_gate_fired"]
     assert result["checks"]["ticket_output_matches_decision"]
     assert not list(tmp_path.glob("tickets/*.md"))
+
+
+# --------------------------------------------------------------------------------------
+# production LLM wrapper (retries, timeout, token ceiling)
+# --------------------------------------------------------------------------------------
+def test_build_chat_model_sets_retries_timeout_and_token_ceiling(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    llm = build_chat_model(max_tokens=256)
+    assert llm.max_retries == 3
+    assert llm.max_tokens == 256
+    assert float(llm.request_timeout) == 60.0
+    assert llm.streaming is False
+
+
+def test_build_chat_model_default_token_ceiling(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    from quenchguard.llmops import DEFAULT_MAX_TOKENS
+
+    assert build_chat_model().max_tokens == DEFAULT_MAX_TOKENS

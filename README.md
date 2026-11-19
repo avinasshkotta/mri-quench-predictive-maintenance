@@ -76,11 +76,12 @@ mri-quench-predictive-maintenance/
 │   ├── monitor.py                             # drift CLI (--check exits 1 on retraining trigger)
 │   ├── audit_fairness.py                      # fleet fairness CLI (--check exits 1 on policy fail)
 │   ├── validate_cmapss.py                     # NASA C-MAPSS external validation (--download)
-│   ├── demo_app.py                            # Streamlit interactive demo (4 tabs)
+│   ├── demo_app.py                            # optional local Streamlit demo (legacy)
 │   ├── build_demo_bundle.py                   # committed data/demo fallback for cloud demos
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
-│   └── serve.py                               # uvicorn entry point for the API
+│   ├── mcp_client_demo.py                     # MCP client: discover + call agent tools
+│   └── serve.py                               # uvicorn entry point: customer UI + API
 ├── src/quenchguard/
 │   ├── config.py          # every physics threshold, split, cost — one place
 │   ├── data_gen.py        # synthetic multi-rate streams + labelled events (BRONZE)
@@ -94,11 +95,13 @@ mri-quench-predictive-maintenance/
 │   ├── evaluate.py        # threshold policy, lead time, cost model, plots
 │   ├── explain.py         # SHAP: TreeExplainer global/local explanations
 │   ├── tracking.py        # MLflow experiment tracking + model registry
-│   ├── serving.py         # FastAPI: /predict with SHAP top-factors
+│   ├── serving.py         # FastAPI: /predict, SHAP top-factors, Art. 12 audit log
+│   ├── webui.py           # customer web app: SSE agent chat + fleet/magnet panels
+│   ├── mcp_server.py      # MCP server: read-only tools over stdio/SSE/HTTP
 │   ├── monitoring.py      # Evidently PSI drift checks (retraining trigger)
 │   ├── agent.py           # LangGraph maintenance agent (tools + RAG + HITL)
-│   ├── llmops.py          # token/cost ledger + LangSmith config + eval rows
-│   ├── fairness.py        # Fairlearn fleet audit (event recall + alert parity)
+│   ├── llmops.py          # token/cost ledger + LLM wrapper + LangSmith config
+│   ├── fairness.py        # Fairlearn fleet audit (DPD/EOD + event recall policy)
 │   └── external_validation.py  # NASA C-MAPSS FD001 methodology validation
 ├── data/
 │   ├── raw/               # BRONZE  : as-is simulator output (never mutated)
@@ -108,14 +111,16 @@ mri-quench-predictive-maintenance/
 │   ├── external/cmapss/   # NASA FD001 files (downloaded on demand, git-ignored)
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT serving triple (committed, ~0.6 MB)
-├── tests/                 # 114 pytest tests (leakage, quality, XAI, tracking, API, drift, agent, llmops, fairness, external)
+├── frontend/              # customer web UI (Next.js static export, served by the API)
+├── tests/                 # 140 pytest tests (leakage, quality, XAI, tracking, API, web/SSE, MCP, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
 │   ├── eu_ai_act.md       # AI Act obligation mapping + risk register
+│   ├── mlops_alignment.md # Week 5/7 alignment: ops matrix, failure modes, XAI, AI Act evidence
 │   ├── external_validation.md  # C-MAPSS protocol, results, censoring caveats
 │   └── model_card.md      # model card, attached to every MLflow run
-├── Dockerfile             # serving image (FastAPI + CPU torch)
+├── Dockerfile             # one image: Next.js customer UI + FastAPI + CPU torch
 ├── requirements.txt
 └── pyproject.toml
 ```
@@ -131,15 +136,25 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 114 tests
+python -m pytest                          # 140 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
 
-# interactive browser demo (4 tabs: fleet, drilldown, agent chat + HITL, governance)
-streamlit run scripts/demo_app.py
-# needs models/ artifacts: python scripts/run_pipeline.py (local)
-#   or python scripts/build_demo_bundle.py + committed models/ (cloud)
+# customer web app: streaming agent chat + live fleet panels (LLM, RAG, agent, HITL)
+python scripts/serve.py                    # http://127.0.0.1:8000  (UI + /api/* + /predict)
+# dev UI with hot reload:  cd frontend && npm install && npm run dev   -> :3000
+# production build served by the API:  cd frontend && npm run build   -> frontend/out
+
+# deployment knobs (Week 7 patterns)
+$env:PREDICTION_THRESHOLD = "0.80"     # override the frozen threshold, no rebuild
+$env:MODEL_SOURCE = "registry"          # load @champion from MLflow (falls back to models/)
+$env:PREDICTION_LOG_PATH = "reports/prediction_log.jsonl"   # EU AI Act Art. 12 audit trail
+
+# MCP server (Week 5 connection layer; read-only tools, no ticket writes)
+$env:PYTHONPATH = "src"                 # bash: export PYTHONPATH=src
+python -m quenchguard.mcp_server        # stdio; add --transport streamable-http --port 8765
+python scripts/mcp_client_demo.py       # client round-trip: discover + call fleet_risk
 
 # governance: fleet fairness audit (Fairlearn, grouped by magnet)
 python scripts/audit_fairness.py          # -> reports/fairness.json (pass/warn/fail)
@@ -163,15 +178,16 @@ mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000   # browse run
 python scripts/monitor.py                  # train-vs-test PSI report + drift_report.html
 python scripts/monitor.py --check          # CI mode: non-zero exit on retraining trigger
 
-# serving: LSTM + SHAP explanations over HTTP
-python scripts/serve.py                   # http://127.0.0.1:8000/docs
+# serving: LSTM + SHAP explanations + Art. 12 audit log over HTTP
+python scripts/serve.py                   # http://127.0.0.1:8000 (customer UI + API)
 curl -X POST http://127.0.0.1:8000/predict \
   -H "Content-Type: application/json" \
   -d "{\"magnet_id\": \"M3\", \"window\": [[...48 x 36 raw features...]]}"
 
-# containerised serving (build after a pipeline run — models/ must exist)
+# containerised serving + customer UI (models/ and frontend/ are committed)
 docker build -t quenchguard .
-docker run --rm -p 8000:8000 quenchguard
+docker run --rm -p 8000:8000 -e OPENAI_API_KEY=sk-... quenchguard
+# -> http://localhost:8000  (customer UI + /api/* + /predict)
 
 # data layer only (Bronze → Silver → Gold, with quality gates)
 python scripts/build_medallion.py          # build all three layers
@@ -194,23 +210,39 @@ python scripts/build_notebook.py --build         # write the .ipynb without exec
 > the native backend; some driver/torch combinations crash at process teardown when a
 > cuDNN-trained LSTM is destroyed. Set it to `False` if your stack shuts down cleanly.
 
-## Run the demo in the cloud (Streamlit Community Cloud)
+## Deploy the customer web app
 
-The serving triple (`models/`, ~0.6 MB) and a slim data fallback
-(`data/demo/`, built by `scripts/build_demo_bundle.py`) are **committed**, so
-the public demo serves the real champion model with no GPU and no secrets in
-git:
+The app is **one container**: the Next.js UI is compiled to a static export and
+served by the same FastAPI process that streams the agent (SSE) and scores the
+model. The serving triple (`models/`) and a slim data bundle (`data/demo/`) are
+**committed**, so no GPU, pipeline run or data regeneration is needed:
 
-1. Sign in at <https://share.streamlit.io> with your GitHub account.
-2. **New app** → pick this repo, branch `main`, main file `scripts/demo_app.py`.
-3. **Advanced settings → Secrets**, paste one line:
-   `OPENAI_API_KEY = "sk-..."` (the app reads `st.secrets`; LangSmith is
-   optional: `LANGCHAIN_API_KEY = "..."`).
-4. Deploy. Fleet / drilldown / agent-chat work immediately; the governance
-   tab reads the committed `reports/*.json`.
+```bash
+docker build -t quenchguard .
+docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... quenchguard
+# customer UI     http://localhost:8000
+# streaming API   http://localhost:8000/api/chat
+# model API       http://localhost:8000/predict
+```
 
-Local runs keep the full medallion data: `agent.data_file()` / `_gold()`
-prefer `data/silver|gold` and only fall back to the committed bundle.
+Deployment knobs (no rebuild required):
+
+| Variable | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | LLM + agent (required for chat) |
+| `PREDICTION_THRESHOLD` | override the frozen alert threshold |
+| `MODEL_SOURCE=registry` | load `@champion` from MLflow (falls back to `models/`) |
+| `PREDICTION_LOG_PATH` | Art. 12 audit log destination (`PREDICTION_LOG=off` disables) |
+| `LLM_MAX_TOKENS` | per-call completion ceiling (default 1024) |
+| `UI_ALLOW_ORIGINS` | CORS origins for a separately hosted frontend |
+
+Split hosting (UI on Vercel, API on any container host) also works: set
+`UI_ALLOW_ORIGINS` on the API and point the built frontend at it. Local runs
+keep the full medallion data — `agent.data_file()` / `_gold()` prefer
+`data/silver|gold` and only fall back to the committed bundle.
+
+See [`docs/mlops_alignment.md`](docs/mlops_alignment.md) for how each course
+requirement (Week 5 stack, Week 7 MLOps/XAI/governance) maps to code.
 
 ---
 
@@ -306,10 +338,12 @@ Plus 9 Phase B tests: SHAP top-factor ordering/direction and the efficiency prop
 flattening, param/metric/tag logging to an isolated SQLite store, `champion` alias
 registration with model round-trip loading, and the guarantee that a tracking outage
 returns `None` instead of raising.
-Plus 9 serving tests: health/model-info contracts, probability + alert + top-3 SHAP
-factors in `/predict`, shape and NaN rejection (422), determinism across calls,
-degraded mode when artifacts are missing (503), and `Artifacts.load` round-trip from
-disk.
+Plus 14 serving tests: health/model-info contracts (model source + registry version),
+probability + alert + top-3 SHAP factors in `/predict`, shape and NaN rejection (422),
+determinism across calls, degraded mode when artifacts are missing (503),
+`Artifacts.load` round-trip from disk, the `PREDICTION_THRESHOLD` env override, the
+EU AI Act Art. 12 JSONL audit record (input sha256, output, SHAP top-3) and its
+off switch, plus registry-source fallback to local artifacts.
 Plus 9 drift tests: PSI flags a shifted synthetic feature and stays quiet on stable
 ones, retraining verdicts (key-feature drift, fleet-wide share, all-stable), bad-input
 rejection, `metrics.json` key-feature extraction, report writing, and (when gold data
@@ -319,16 +353,22 @@ scripted guardrail refusal, HITL interrupt → approval writes the ticket while
 rejection blocks it, thread isolation (checkpointing), ticket markdown format,
 demo-bundle fallback (`data/demo/` is read when silver/gold are absent), and
 real-model tool calls (skip when artifacts are absent).
-Plus 12 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
+Plus 15 LLMOps tests: cost arithmetic + price table, unknown-model flagging, ledger
 totals/persistence, usage scraping from AI messages, LangSmith env handling (incl.
 no os.environ mutation), git-ignored `.env` loading that never overrides real env
-vars, transcript flattening for RAGAS rows, and the full offline
+vars, transcript flattening for RAGAS rows, the production chat-model wrapper
+(retries, timeout, token ceiling), and the full offline
 eval harness (4/4 scenarios, incl. the ticket-without-approval filesystem invariant).
-Plus 8 fairness tests: MetricFrame contract (selection / TPR / FPR / count per
+Plus 9 fairness tests: MetricFrame contract (selection / TPR / FPR / count per
 magnet), hard failure when a magnet misses its events, clean magnets that never
-page not penalising parity, alert-burden disparity detection, PR-AUC skipping
-magnets without positives, report writing, and the real champion-LSTM audit
+page not penalising parity, alert-burden disparity detection, the Fairlearn
+`demographic_parity_difference` / `equalized_odds_difference` contract, PR-AUC
+skipping magnets without positives, report writing, and the real champion-LSTM audit
 (event recall 100 % on all four event-bearing magnets, verdict `pass`).
+Plus 4 MCP tests: the server advertises exactly the read-only tool set (the
+`create_ticket` write tool is unreachable over MCP), every tool has a description
+for LLM discovery, `doc_search` returns ranked citations, and `fleet_risk` runs
+against the committed artifacts.
 Plus 15 external-validation tests: RUL reconstruction for truncated test engines,
 causality (truncating the future cannot change a past feature), identity/age columns
 excluded from the feature set, episode collapsing that never leaks across engines,

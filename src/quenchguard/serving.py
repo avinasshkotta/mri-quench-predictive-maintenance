@@ -23,8 +23,15 @@ Design notes
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
+import tempfile
+import threading
 import time
+import warnings
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +45,7 @@ from pydantic import BaseModel, Field
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 
-from .config import MODELS_DIR, default_config
+from .config import MODELS_DIR, REPORTS_DIR, default_config
 from .explain import top_factors
 from .features import FEATURE_COLUMNS
 from .lstm import LSTMDetector
@@ -80,6 +87,74 @@ class PredictionResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
+    model_source: str = "local"
+    model_version: str | None = None
+
+
+# --------------------------------------------------------------------------------------
+# operating threshold (env override) + prediction audit log (EU AI Act Art. 12)
+# --------------------------------------------------------------------------------------
+def _resolve_threshold(default: float) -> float:
+    """Frozen artifact threshold, overridable by ``PREDICTION_THRESHOLD``.
+
+    Week 7 deployment pattern: the decision threshold is an environment
+    variable, so ops can tighten/relax it without rebuilding the image.
+    """
+    raw = os.environ.get("PREDICTION_THRESHOLD")
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        warnings.warn(f"ignoring non-numeric PREDICTION_THRESHOLD={raw!r}",
+                      RuntimeWarning, stacklevel=2)
+        return default
+
+
+def _audit_path() -> Path | None:
+    if os.environ.get("PREDICTION_LOG", "").strip().lower() in {"off", "0", "false", "none"}:
+        return None
+    return Path(os.environ.get("PREDICTION_LOG_PATH",
+                               str(REPORTS_DIR / "prediction_log.jsonl")))
+
+
+_LOG_LOCK = threading.Lock()
+
+
+def append_prediction_log(record: dict[str, Any]) -> None:
+    """Append one JSONL audit record per scored window (EU AI Act Art. 12).
+
+    Fields: timestamp, magnet id, sha256 of the raw input window, probability,
+    alert, threshold, top-3 SHAP factors, model name/source/version. Writing
+    never breaks a prediction — failures are warnings.
+    """
+    path = _audit_path()
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(record, default=str, separators=(",", ":"))
+        with _LOG_LOCK:
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+    except Exception as exc:                       # noqa: BLE001 — never fail scoring
+        warnings.warn(f"prediction audit log write failed ({exc})",
+                      RuntimeWarning, stacklevel=2)
+
+
+def _registry_triple(alias: str = "champion") -> tuple[Path, str]:
+    """Download the champion run's ``serving/`` artifacts from the MLflow registry."""
+    import mlflow
+    from mlflow.tracking import MlflowClient
+
+    from .tracking import DEFAULT_TRACKING_URI, MODEL_NAME
+
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI))
+    version = MlflowClient().get_model_version_by_alias(MODEL_NAME, alias)
+    dest = tempfile.mkdtemp(prefix="quenchguard_registry_")
+    mlflow.artifacts.download_artifacts(run_id=version.run_id,
+                                        artifact_path="serving", dst_path=dest)
+    return Path(dest) / "serving", str(version.version)
 
 
 # --------------------------------------------------------------------------------------
@@ -98,11 +173,37 @@ class Artifacts:
     horizon_hours: int
     min_lead_hours: int
     model_name: str = "quenchguard_lstm"
+    source: str = "local"                  # "local" | "registry"
+    model_version: str | None = None       # registry version when source=registry
+    fallback_reason: str | None = None     # why registry loading fell back
     _explainer: shap.TreeExplainer | None = field(default=None, repr=False)
 
     @classmethod
-    def load(cls, model_dir: Path | None = None) -> "Artifacts":
-        """Load the triple the pipeline persists: LSTM + scaler + HistGBDT."""
+    def load(cls, model_dir: Path | None = None,
+             source: str | None = None) -> "Artifacts":
+        """Load the triple the pipeline persists: LSTM + scaler + HistGBDT.
+
+        ``source`` / ``MODEL_SOURCE`` selects the artifact origin:
+
+        * ``local``    — ``models/`` in the repo (default; what the container ships)
+        * ``registry`` — the MLflow Model Registry champion alias
+          (``models:/quenchguard_lstm@champion``); falls back to ``local``
+          with a warning when the registry is unreachable, so a tracked
+          registry outage never takes scoring down.
+        """
+        source = (source or os.environ.get("MODEL_SOURCE", "local")).strip().lower()
+        fallback_reason: str | None = None
+        model_version: str | None = None
+        if source == "registry" and model_dir is None:
+            try:
+                model_dir, model_version = _registry_triple()
+            except Exception as exc:               # noqa: BLE001 — fall back, never fail
+                fallback_reason = f"{type(exc).__name__}: {exc}"
+                warnings.warn(
+                    f"MODEL_SOURCE=registry unavailable ({fallback_reason}); "
+                    "falling back to local models/ artifacts",
+                    RuntimeWarning, stacklevel=2)
+                source = "local"
         model_dir = model_dir or MODELS_DIR
         model_path = model_dir / "lstm_detector.pt"
         scaler_path = model_dir / "scaler.joblib"
@@ -125,11 +226,14 @@ class Artifacts:
             model=model,
             scaler=joblib.load(scaler_path),
             gbdt=joblib.load(gbdt_path),
-            threshold=float(meta.get("threshold", 0.5)),
+            threshold=_resolve_threshold(float(meta.get("threshold", 0.5))),
             feature_names=list(meta.get("features", FEATURE_COLUMNS)),
             seq_len=int(meta.get("seq_len", cfg.window.seq_len)),
             horizon_hours=int(meta.get("horizon_hours", cfg.window.horizon_hours)),
             min_lead_hours=cfg.window.min_lead_hours,
+            source=source,
+            model_version=model_version,
+            fallback_reason=fallback_reason,
         )
 
     @property
@@ -198,8 +302,10 @@ def create_app(artifacts: Artifacts | None = None,
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         try:
-            _get()
-            return HealthResponse(status="ok", model_loaded=True)
+            art = _get()
+            return HealthResponse(status="ok", model_loaded=True,
+                                  model_source=art.source,
+                                  model_version=art.model_version)
         except HTTPException:
             return HealthResponse(status="degraded", model_loaded=False)
 
@@ -208,6 +314,9 @@ def create_app(artifacts: Artifacts | None = None,
         art = _get()
         return {
             "model_name": art.model_name,
+            "model_source": art.source,
+            "model_version": art.model_version,
+            "fallback_reason": art.fallback_reason,
             "seq_len": art.seq_len,
             "n_features": len(art.feature_names),
             "feature_names": art.feature_names,
@@ -240,6 +349,24 @@ def create_app(artifacts: Artifacts | None = None,
         body = art.predict(window)
         body["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
         body["magnet_id"] = req.magnet_id
+        # EU AI Act Art. 12: every scored window gets an audit record
+        # (input hash, output, threshold, SHAP top-3, model provenance).
+        append_prediction_log({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "magnet_id": req.magnet_id,
+            "input_sha256": hashlib.sha256(
+                np.ascontiguousarray(window, dtype=np.float64).tobytes()).hexdigest(),
+            "quench_probability": body["quench_probability"],
+            "alert": body["alert"],
+            "threshold": body["threshold"],
+            "baseline_probability": body["baseline_probability"],
+            "top_factors": [{"feature": f["feature"], "shap_value": f["shap_value"]}
+                            for f in body["explanation"]],
+            "model_name": body["model_name"],
+            "model_source": art.source,
+            "model_version": art.model_version,
+            "latency_ms": body["latency_ms"],
+        })
         return PredictionResponse(**body)
 
     return app
@@ -248,4 +375,5 @@ def create_app(artifacts: Artifacts | None = None,
 # module-level app for `uvicorn quenchguard.serving:app`
 app = create_app()
 
-__all__ = ["create_app", "app", "Artifacts", "PredictRequest", "PredictionResponse"]
+__all__ = ["create_app", "app", "Artifacts", "PredictRequest", "PredictionResponse",
+           "append_prediction_log"]
