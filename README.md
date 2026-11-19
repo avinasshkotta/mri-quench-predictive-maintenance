@@ -112,7 +112,7 @@ mri-quench-predictive-maintenance/
 │   └── lineage/           # per-layer manifests: sha256, rows, schema, config
 ├── models/                # LSTM + scaler + HistGBDT serving triple (committed, ~0.6 MB)
 ├── frontend/              # customer web UI (Next.js static export, served by the API)
-├── tests/                 # 140 pytest tests (leakage, quality, XAI, tracking, API, web/SSE, MCP, drift, agent, llmops, fairness, external)
+├── tests/                 # 146 pytest tests (leakage, quality, XAI, tracking, API, web/SSE, MCP, drift, agent, llmops, fairness, external)
 ├── reports/               # metrics.json, sweeps, SHAP figures, interactive + notebook HTML
 ├── docs/
 │   ├── case-study-rctc.md
@@ -136,7 +136,7 @@ pip install -r requirements.txt
 
 python scripts/run_pipeline.py            # full run: data → medallion → model → XAI → reports
 python scripts/build_report.py           # interactive HTML report (open in a browser)
-python -m pytest                          # 140 tests
+python -m pytest                          # 146 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
@@ -233,6 +233,7 @@ Deployment knobs (no rebuild required):
 | `PREDICTION_THRESHOLD` | override the frozen alert threshold |
 | `MODEL_SOURCE=registry` | load `@champion` from MLflow (falls back to `models/`) |
 | `PREDICTION_LOG_PATH` | Art. 12 audit log destination (`PREDICTION_LOG=off` disables) |
+| `SMTP_HOST` + `TICKET_ALERT_TO` | email alerts for approved tickets (`SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_USE_TLS`) |
 | `LLM_MAX_TOKENS` | per-call completion ceiling (default 1024) |
 | `UI_ALLOW_ORIGINS` | CORS origins for a separately hosted frontend |
 
@@ -241,6 +242,19 @@ Split hosting (UI on Vercel, API on any container host) also works: set
 `NEXT_PUBLIC_API_BASE=https://your-api.example.com`, and deploy `frontend/` to
 Vercel. Local runs keep the full medallion data — `agent.data_file()` /
 `_gold()` prefer `data/silver|gold` and only fall back to the committed bundle.
+
+### Fly.io (optional, `fly.toml` included)
+
+```bash
+fly launch --no-deploy --copy-config     # pick a unique app name
+fly secrets set OPENAI_API_KEY=sk-...
+fly deploy
+```
+
+The machine is sized `shared-cpu-1x / 1 GB` (about $6.70/month always-on) and
+auto-stops when idle to keep a demo cheap. Ticket emails work by adding the
+`SMTP_*` / `TICKET_ALERT_TO` secrets. Multiple projects are separate Fly apps
+(one machine each, billed per organisation).
 
 See [`docs/mlops_alignment.md`](docs/mlops_alignment.md) for how each course
 requirement (Week 5 stack, Week 7 MLOps/XAI/governance) maps to code.
@@ -366,6 +380,11 @@ page not penalising parity, alert-burden disparity detection, the Fairlearn
 `demographic_parity_difference` / `equalized_odds_difference` contract, PR-AUC
 skipping magnets without positives, report writing, and the real champion-LSTM audit
 (event recall 100 % on all four event-bearing magnets, verdict `pass`).
+Plus 6 notification tests: the SMTP notifier is a no-op unless
+`SMTP_HOST` + `TICKET_ALERT_TO` are set, an approved ticket produces the
+subject/body (magnet, priority, summary, action, Art. 14 note), STARTTLS and
+login are used, delivery failures only warn, and ticket creation never fails
+because of mail.
 Plus 4 MCP tests: the server advertises exactly the read-only tool set (the
 `create_ticket` write tool is unreachable over MCP), every tool has a description
 for LLM discovery, `doc_search` returns ranked citations, and `fleet_risk` runs

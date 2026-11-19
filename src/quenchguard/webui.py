@@ -271,6 +271,8 @@ def create_app(llm: Any | None = None,
 
     @api.get("/status")
     def status() -> dict[str, Any]:
+        from .notify import status as email_status
+
         silver = REPO_ROOT / "data" / "silver" / "pressure.parquet"
         demo = REPO_ROOT / "data" / "demo" / "pressure.parquet"
         return {
@@ -280,6 +282,7 @@ def create_app(llm: Any | None = None,
             "artifacts_loaded": (MODELS_DIR / "lstm_detector.pt").exists(),
             "data_source": "silver" if silver.exists() else
                            ("demo" if demo.exists() else "none"),
+            **email_status(),
         }
 
     @api.post("/chat")

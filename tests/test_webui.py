@@ -60,6 +60,7 @@ def test_status_reports_capabilities():
     assert body["status"] == "ok"
     assert set(body) >= {"llm_configured", "model", "artifacts_loaded", "data_source"}
     assert body["data_source"] in {"silver", "demo", "none"}
+    assert "ticket_email_configured" in body
 
 
 def test_model_routes_stay_mounted():

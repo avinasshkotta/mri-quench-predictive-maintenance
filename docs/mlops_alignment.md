@@ -71,7 +71,7 @@ defensible answer, not an omission.
 |---|---|---|
 | Art. 10 data governance | synthetic data card + medallion lineage + Fairlearn audit | `docs/model_card.md`, `data/lineage/`, `reports/fairness.json` |
 | Art. 11 documentation | model card attached to every MLflow run | `docs/model_card.md`, `tracking.py` |
-| **Art. 12 logging** | **per-prediction JSONL audit log** (timestamp, input sha256, probability, alert, threshold, SHAP top-3, model source/version) | `serving.append_prediction_log`, `reports/prediction_log.jsonl` |
+| **Art. 12 logging** | **per-prediction JSONL audit log** (timestamp, input sha256, probability, alert, threshold, SHAP top-3, model source/version); approved tickets also email the maintenance inbox (SMTP, fail-safe) | `serving.append_prediction_log`, `notify.notify_ticket`, `reports/prediction_log.jsonl` |
 | Art. 13 transparency | SHAP top-3 in every `/predict` response; `/api/magnet/{id}` panel | `serving.py`, `webui.py` |
 | Art. 14 human oversight | LangGraph `interrupt()` before `create_ticket`; UI Approve/Reject | `agent.py`, `webui.py` |
 | Art. 15 robustness | Evidently PSI drift + retraining trigger; Pydantic validation; NaN/shape rejection | `monitoring.py`, `serving.py` |

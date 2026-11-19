@@ -219,15 +219,25 @@ def create_ticket(magnet_id: str, priority: str, summary: str,
     tickets = REPORTS_DIR / "tickets"
     tickets.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    created = datetime.now(timezone.utc).isoformat()
     path = tickets / f"{stamp}_{magnet_id}.md"
     path.write_text(
         f"# Service ticket — {magnet_id}\n\n"
-        f"- created: {datetime.now(timezone.utc).isoformat()}\n"
+        f"- created: {created}\n"
         f"- priority: **{priority}**\n"
         f"- approved by: human operator (HITL gate)\n\n"
         f"## Summary\n{summary}\n\n"
         f"## Recommended action\n{recommended_action}\n",
         encoding="utf-8")
+    # Email alert after the file exists: the ticket file is the audit record,
+    # so a mail outage must never lose or block a ticket.
+    try:
+        from .notify import notify_ticket
+
+        notify_ticket(magnet_id, priority, summary, recommended_action,
+                      str(path), created)
+    except Exception:                              # noqa: BLE001 — fail-safe
+        pass
     return json.dumps({"created": True, "path": str(path)})
 
 
