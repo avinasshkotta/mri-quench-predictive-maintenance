@@ -43,6 +43,19 @@ false alerts              : 2 = 0.64/magnet-month (budget 1)
 
 ---
 
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [Project report](docs/project_report.md) | full technical report: data, features, model, results, XAI, drift, fairness, external validation, agent, deployment, limitations |
+| [User guide](docs/user_guide.md) | how to run and use the UI, API, agent, MCP server, notebooks and deployment knobs |
+| [MLOps alignment](docs/mlops_alignment.md) | Week 5/7 mapping: ops disciplines, 9 agent failure modes, XAI choice, AI Act evidence |
+| [Interview Q&A](docs/interview_qa.md) | 40 project-grounded questions with code-anchored answers |
+| [Notebooks](notebooks/) | `01` model training (executed), `02` end-to-end project walkthrough (executed) |
+| [Walkthrough HTML](reports/project_walkthrough.html) | rendered `02` notebook for reading in a browser |
+
+---
+
 ## Why a sequence model?
 
 The failure signals are staggered — this is the whole point of the case:
@@ -67,7 +80,8 @@ near-miss leaks that a top-up fixes — so single-sensor rules page constantly.
 ```
 mri-quench-predictive-maintenance/
 ├── notebooks/
-│   └── 01_predictive_maintenance_lstm.ipynb   # executed walkthrough (16 steps)
+│   ├── 01_predictive_maintenance_lstm.ipynb   # model-training walkthrough (executed)
+│   └── 02_end_to_end_project_walkthrough.ipynb # whole project: data → agent → deploy
 ├── scripts/
 │   ├── run_pipeline.py                        # data → medallion → model → XAI → drift → fairness → reports
 │   ├── build_medallion.py                     # Bronze → Silver → Gold + quality gates
@@ -80,6 +94,7 @@ mri-quench-predictive-maintenance/
 │   ├── build_demo_bundle.py                   # committed data/demo fallback for cloud demos
 │   ├── agent_demo.py                          # LangGraph agent demo (OpenAI, HITL ticket)
 │   ├── eval_agent.py                          # offline agent eval (+ optional RAGAS)
+│   ├── build_project_notebook.py              # end-to-end walkthrough notebook (executed)
 │   ├── mcp_client_demo.py                     # MCP client: discover + call agent tools
 │   └── serve.py                               # uvicorn entry point: customer UI + API
 ├── src/quenchguard/
@@ -119,7 +134,10 @@ mri-quench-predictive-maintenance/
 │   ├── eu_ai_act.md       # AI Act obligation mapping + risk register
 │   ├── mlops_alignment.md # Week 5/7 alignment: ops matrix, failure modes, XAI, AI Act evidence
 │   ├── external_validation.md  # C-MAPSS protocol, results, censoring caveats
-│   └── model_card.md      # model card, attached to every MLflow run
+│   ├── model_card.md      # model card, attached to every MLflow run
+│   ├── project_report.md  # full technical report (results, governance, limits)
+│   ├── user_guide.md      # how to run and use every surface
+│   ├── interview_qa.md    # project-grounded interview questions and answers
 ├── Dockerfile             # one image: Next.js customer UI + FastAPI + CPU torch
 ├── requirements.txt
 └── pyproject.toml
@@ -140,6 +158,10 @@ python -m pytest                          # 146 tests
 
 # external validation: NASA C-MAPSS FD001 (real turbofan data, downloaded on demand)
 python scripts/validate_cmapss.py --download   # -> reports/external_validation.json
+
+# notebooks: 01 trains the LSTM; 02 is the whole-project walkthrough (no training)
+python scripts/build_notebook.py
+python scripts/build_project_notebook.py       # -> reports/project_walkthrough.html
 
 # customer web app: streaming agent chat + live fleet panels (LLM, RAG, agent, HITL)
 python scripts/serve.py                    # http://127.0.0.1:8000  (UI + /api/* + /predict)
