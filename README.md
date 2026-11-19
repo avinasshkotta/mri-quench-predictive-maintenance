@@ -47,10 +47,10 @@ false alerts              : 2 = 0.64/magnet-month (budget 1)
 
 | Document | What it covers |
 |---|---|
-| [Project report](docs/project_report.md) | full technical report: data, features, model, results, XAI, drift, fairness, external validation, agent, deployment, limitations |
-| [User guide](docs/user_guide.md) | how to run and use the UI, API, agent, MCP server, notebooks and deployment knobs |
 | [MLOps alignment](docs/mlops_alignment.md) | Week 5/7 mapping: ops disciplines, 9 agent failure modes, XAI choice, AI Act evidence |
-| [Interview Q&A](docs/interview_qa.md) | 40 project-grounded questions with code-anchored answers |
+| [Model card](docs/model_card.md) | intended use, metrics, limitations, governance attachments |
+| [EU AI Act mapping](docs/eu_ai_act.md) | obligation-by-obligation evidence and risk register |
+| [External validation](docs/external_validation.md) | C-MAPSS protocol, results, censoring caveats |
 | [Notebooks](notebooks/) | `01` model training (executed), `02` end-to-end project walkthrough (executed) |
 | [Walkthrough HTML](reports/project_walkthrough.html) | rendered `02` notebook for reading in a browser |
 
@@ -135,9 +135,6 @@ mri-quench-predictive-maintenance/
 │   ├── mlops_alignment.md # Week 5/7 alignment: ops matrix, failure modes, XAI, AI Act evidence
 │   ├── external_validation.md  # C-MAPSS protocol, results, censoring caveats
 │   ├── model_card.md      # model card, attached to every MLflow run
-│   ├── project_report.md  # full technical report (results, governance, limits)
-│   ├── user_guide.md      # how to run and use every surface
-│   ├── interview_qa.md    # project-grounded interview questions and answers
 ├── Dockerfile             # one image: Next.js customer UI + FastAPI + CPU torch
 ├── requirements.txt
 └── pyproject.toml
@@ -270,8 +267,7 @@ Vercel. Local runs keep the full medallion data — `agent.data_file()` /
 The image is host-agnostic: run it on **Google Cloud Run**
 (`--memory 1Gi --max-instances 1 --min-instances 0 --port 8000`), on any small
 VM with Docker, or on another container service. A single instance is required
-while the HITL approval state is in-process (`MemorySaver`) — see
-[`docs/user_guide.md`](docs/user_guide.md) for the full deployment notes.
+while the HITL approval state is in-process (`MemorySaver`).
 
 See [`docs/mlops_alignment.md`](docs/mlops_alignment.md) for how each course
 requirement (Week 5 stack, Week 7 MLOps/XAI/governance) maps to code.
