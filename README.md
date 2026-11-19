@@ -237,9 +237,10 @@ Deployment knobs (no rebuild required):
 | `UI_ALLOW_ORIGINS` | CORS origins for a separately hosted frontend |
 
 Split hosting (UI on Vercel, API on any container host) also works: set
-`UI_ALLOW_ORIGINS` on the API and point the built frontend at it. Local runs
-keep the full medallion data — `agent.data_file()` / `_gold()` prefer
-`data/silver|gold` and only fall back to the committed bundle.
+`UI_ALLOW_ORIGINS` on the API, build the frontend with
+`NEXT_PUBLIC_API_BASE=https://your-api.example.com`, and deploy `frontend/` to
+Vercel. Local runs keep the full medallion data — `agent.data_file()` /
+`_gold()` prefer `data/silver|gold` and only fall back to the committed bundle.
 
 See [`docs/mlops_alignment.md`](docs/mlops_alignment.md) for how each course
 requirement (Week 5 stack, Week 7 MLOps/XAI/governance) maps to code.

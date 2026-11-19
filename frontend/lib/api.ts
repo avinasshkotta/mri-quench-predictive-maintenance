@@ -7,14 +7,21 @@ import type {
 import { isRecord, readString } from "@/lib/types";
 
 /**
- * Local development: Next dev server on :3000, FastAPI on :8000.
- * Production: FastAPI serves the static export from the same origin.
+ * API origin resolution, in priority order:
+ * 1. `NEXT_PUBLIC_API_BASE` at build time (split hosting: UI on Vercel, API
+ *    on a container host).
+ * 2. Local development: Next dev server on :3000, FastAPI on :8000.
+ * 3. Production single container: FastAPI serves the static export from the
+ *    same origin.
  */
+const CONFIGURED_API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "");
+
 export const API_BASE =
-  typeof window !== "undefined" &&
+  CONFIGURED_API_BASE ??
+  (typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://127.0.0.1:8000"
-    : "";
+    : "");
 
 export class ApiError extends Error {
   readonly status: number;
