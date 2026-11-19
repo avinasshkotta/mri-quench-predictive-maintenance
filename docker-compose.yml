@@ -1,0 +1,30 @@
+# QuenchGuard — one-command runtime.
+#
+#   docker compose up -d      # build (if needed) + start -> http://localhost:8000
+#   docker compose stop       # app goes offline (container stopped)
+#   docker compose down       # stop and remove the container
+#
+# Secrets and SMTP settings come from the git-ignored `.env`; tickets and the
+# Art. 12 prediction log persist in the named volume across restarts.
+
+services:
+  quenchguard:
+    build: .
+    image: quenchguard:latest
+    container_name: quenchguard
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - quenchguard-reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  quenchguard-reports:

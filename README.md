@@ -264,6 +264,21 @@ Vercel. Local runs keep the full medallion data — `agent.data_file()` /
 
 ### Container hosts
 
+### Local lifecycle (Docker-only)
+
+`docker-compose.yml` makes the container the **only** runtime:
+
+```bash
+docker compose up -d      # app live on http://localhost:8000 while the container runs
+docker compose stop       # container stopped -> app offline
+docker compose logs -f    # follow logs
+docker compose down       # remove the container (volume is kept)
+```
+
+Tickets (`reports/tickets/`) and the Art. 12 prediction log persist in the
+`quenchguard-reports` volume across restarts. Secrets and SMTP settings come
+from the git-ignored `.env` via `env_file`.
+
 The image is host-agnostic: run it on **Google Cloud Run**
 (`--memory 1Gi --max-instances 1 --min-instances 0 --port 8000`), on any small
 VM with Docker, or on another container service. A single instance is required
