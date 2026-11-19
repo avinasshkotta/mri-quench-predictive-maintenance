@@ -58,6 +58,15 @@ def test_unconfigured_is_a_noop(monkeypatch):
     assert N.email_configured() is False
     assert N.notify_ticket("MRI-01", "low", "s", "a") is False
 
+    # Gmail/SES reject unauthenticated relays: a user without a password is
+    # not a usable configuration.
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_USER", "alerts@example.com")
+    monkeypatch.setenv("TICKET_ALERT_TO", "alerts@example.com")
+    assert N.email_configured() is False
+    monkeypatch.setenv("SMTP_PASSWORD", "app-password")
+    assert N.email_configured() is True
+
 
 def test_configured_sends_alert_email(monkeypatch):
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")

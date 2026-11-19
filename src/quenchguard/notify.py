@@ -36,8 +36,17 @@ def recipients() -> list[str]:
 
 
 def email_configured() -> bool:
-    """True when SMTP host and at least one recipient are configured."""
-    return bool(_env("SMTP_HOST") and recipients())
+    """True when SMTP is usable.
+
+    Requires a host and at least one recipient, and — when an SMTP user is
+    configured — a password (Gmail/SES reject unauthenticated relays, so
+    reporting "configured" without credentials would be misleading).
+    """
+    if not _env("SMTP_HOST") or not recipients():
+        return False
+    if _env("SMTP_USER") and not _env("SMTP_PASSWORD"):
+        return False
+    return True
 
 
 def ticket_email(magnet_id: str, priority: str, summary: str,
