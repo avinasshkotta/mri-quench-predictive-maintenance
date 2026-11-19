@@ -214,7 +214,9 @@ docker build -t quenchguard .
 docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... quenchguard
 ```
 
-- **Fly.io**: `fly.toml` is included; set secrets and `fly deploy`.
+- **Any container host** (Cloud Run, a small VM with Docker): expose port 8000,
+  pass `OPENAI_API_KEY` as a secret, and set `PREDICTION_LOG_PATH` to a
+  persistent path if the audit log must survive restarts.
 - **Cloud Run**: `--memory 1Gi --max-instances 1 --min-instances 0 --port 8000`
   (single instance keeps the in-memory HITL state correct).
 - **Email**: add the `SMTP_*` / `TICKET_ALERT_TO` secrets; port 587 is allowed on

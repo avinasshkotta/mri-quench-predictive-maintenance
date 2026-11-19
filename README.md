@@ -265,18 +265,13 @@ Split hosting (UI on Vercel, API on any container host) also works: set
 Vercel. Local runs keep the full medallion data — `agent.data_file()` /
 `_gold()` prefer `data/silver|gold` and only fall back to the committed bundle.
 
-### Fly.io (optional, `fly.toml` included)
+### Container hosts
 
-```bash
-fly launch --no-deploy --copy-config     # pick a unique app name
-fly secrets set OPENAI_API_KEY=sk-...
-fly deploy
-```
-
-The machine is sized `shared-cpu-1x / 1 GB` (about $6.70/month always-on) and
-auto-stops when idle to keep a demo cheap. Ticket emails work by adding the
-`SMTP_*` / `TICKET_ALERT_TO` secrets. Multiple projects are separate Fly apps
-(one machine each, billed per organisation).
+The image is host-agnostic: run it on **Google Cloud Run**
+(`--memory 1Gi --max-instances 1 --min-instances 0 --port 8000`), on any small
+VM with Docker, or on another container service. A single instance is required
+while the HITL approval state is in-process (`MemorySaver`) — see
+[`docs/user_guide.md`](docs/user_guide.md) for the full deployment notes.
 
 See [`docs/mlops_alignment.md`](docs/mlops_alignment.md) for how each course
 requirement (Week 5 stack, Week 7 MLOps/XAI/governance) maps to code.

@@ -301,7 +301,8 @@ docker build -t quenchguard .
 docker run -p 8000:8000 -e OPENAI_API_KEY=sk-... quenchguard
 ```
 
-- **Fly.io**: `fly.toml` included (1 GB shared machine, auto-stop, `/health`).
+- **Any container host** (Cloud Run, a small VM with Docker): expose port 8000
+  and pass `OPENAI_API_KEY` as a secret.
 - **Google Cloud Run**: `--memory 1Gi --max-instances 1 --min-instances 0 --port 8000`.
   Single instance is required because the HITL approval state is in-process
   (`MemorySaver`); migrate to `langgraph-checkpoint-sqlite` for horizontal scaling.
